@@ -1,0 +1,582 @@
+-- ============================================================================
+-- PLUGGED IN IT DATABASE SCHEMA
+-- ============================================================================
+-- Database: pluggedin_itdbadm
+-- Description: E-commerce database schema for IT products
+-- Created: July 22, 2025
+-- ============================================================================
+
+DROP DATABASE IF EXISTS pluggedin_itdbadm;
+CREATE DATABASE pluggedin_itdbadm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE pluggedin_itdbadm;
+
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost
+-- Generation Time: Jul 22, 2025 at 08:04 PM
+-- Server version: 10.4.28-MariaDB
+-- PHP Version: 8.2.4
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+-- ============================================================================
+-- STORED PROCEDURES
+-- ============================================================================
+
+DELIMITER $$
+
+-- ----------------------------------------------------------------------------
+-- Procedure: add_new_product
+-- Description: Adds a new product to the products table
+-- Parameters: product_name, category_code, description, stock_qty, srp_php
+-- ----------------------------------------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `add_new_product` (
+    IN `product_name` VARCHAR(45), 
+    IN `category_code` INT, 
+    IN `description` VARCHAR(45), 
+    IN `stock_qty` INT, 
+    IN `srp_php` FLOAT
+)   
+BEGIN
+   INSERT INTO products (product_name, category_code, description, stock_qty, srp_php)
+   VALUES (product_name, category_code, description, stock_qty, srp_php);
+END$$
+
+-- ----------------------------------------------------------------------------
+-- Procedure: delete_customer_account
+-- Description: Completely removes a customer and all related data
+-- Parameters: customer_id (user_id)
+-- Note: Cascades deletion through orders, cart, favorites, and users
+-- ----------------------------------------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_customer_account` (IN `customer_id` INT)   
+BEGIN
+   DELETE FROM orders WHERE user_id = customer_id;
+   DELETE FROM cart WHERE user_id = customer_id;
+   DELETE FROM isfavorite WHERE user_id = customer_id;
+   DELETE FROM users WHERE user_id = customer_id;
+END$$
+
+-- ----------------------------------------------------------------------------
+-- Procedure: delete_product
+-- Description: Removes a product and all related references
+-- Parameters: input_product_code
+-- Note: Cascades deletion through cart, favorites, order_items, and products
+-- ----------------------------------------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_product` (IN `input_product_code` INT)   
+BEGIN
+  DELETE FROM cart WHERE product_code = input_product_code;
+  DELETE FROM isfavorite WHERE product_code = input_product_code;
+  DELETE FROM order_items WHERE product_code = input_product_code;
+  DELETE FROM products WHERE product_code = input_product_code;
+END$$
+
+-- ----------------------------------------------------------------------------
+-- Procedure: update_order_status
+-- Description: Updates the status of an order
+-- Parameters: input_order_id, new_status
+-- ----------------------------------------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `update_order_status` (
+    IN `input_order_id` INT, 
+    IN `new_status` VARCHAR(45)
+)   
+BEGIN
+   UPDATE orders SET order_status = new_status WHERE order_id = input_order_id;
+END$$
+
+-- ----------------------------------------------------------------------------
+-- Procedure: update_product_stock
+-- Description: Updates the stock quantity of a product
+-- Parameters: input_product_code, new_stock
+-- ----------------------------------------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `update_product_stock` (
+    IN `input_product_code` INT, 
+    IN `new_stock` INT
+)   
+BEGIN
+   UPDATE products SET stock_qty = new_stock WHERE product_code = input_product_code;
+END$$
+
+DELIMITER ;
+
+-- ============================================================================
+-- TABLE STRUCTURES
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Table: categories
+-- Description: Product categories (Headphones, Monitors, Keyboards, etc.)
+-- ----------------------------------------------------------------------------
+CREATE TABLE `categories` (
+  `category_code` int(11) NOT NULL,
+  `category_name` varchar(45) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: currencies
+-- Description: Supported currencies with exchange rates to PHP
+-- ----------------------------------------------------------------------------
+CREATE TABLE `currencies` (
+  `currency_code` int(11) NOT NULL,
+  `price_php` varchar(45) DEFAULT NULL,
+  `currency_name` varchar(45) DEFAULT NULL,
+  `symbol` varchar(5) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: users
+-- Description: All system users (Customers, Staff, Admin)
+-- ----------------------------------------------------------------------------
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL,
+  `user_role` varchar(25) NOT NULL,
+  `first_name` varchar(45) DEFAULT NULL,
+  `last_name` varchar(45) DEFAULT NULL,
+  `email` varchar(45) DEFAULT NULL,
+  `password` varchar(45) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: products
+-- Description: Product catalog with pricing and inventory
+-- ----------------------------------------------------------------------------
+CREATE TABLE `products` (
+  `product_code` int(11) NOT NULL,
+  `category_code` int(11) DEFAULT NULL,
+  `product_name` varchar(45) DEFAULT NULL,
+  `description` varchar(45) DEFAULT NULL,
+  `stock_qty` int(11) DEFAULT NULL,
+  `srp_php` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: cart
+-- Description: Shopping cart items for customers
+-- ----------------------------------------------------------------------------
+CREATE TABLE `cart` (
+  `cart_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `product_code` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 1,
+  `date_added` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: isfavorite
+-- Description: Customer favorite products (many-to-many relationship)
+-- ----------------------------------------------------------------------------
+CREATE TABLE `isfavorite` (
+  `user_id` int(11) NOT NULL,
+  `product_code` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: orders
+-- Description: Customer orders with total amount and status
+-- ----------------------------------------------------------------------------
+CREATE TABLE `orders` (
+  `order_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `order_date` date DEFAULT NULL,
+  `totalamt_php` float NOT NULL,
+  `order_status` varchar(45) DEFAULT NULL,
+  `currency_code` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: order_items
+-- Description: Individual items within each order
+-- ----------------------------------------------------------------------------
+CREATE TABLE `order_items` (
+  `order_item_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `product_code` int(11) DEFAULT NULL,
+  `quantity` int(11) DEFAULT NULL,
+  `srp_php` float DEFAULT NULL,
+  `totalprice_php` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: payments
+-- Description: Payment information for orders
+-- ----------------------------------------------------------------------------
+CREATE TABLE `payments` (
+  `payment_id` int(11) NOT NULL,
+  `currency_code` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `totalamt_php` float NOT NULL,
+  `payment_status` enum('paid','unpaid') NOT NULL,
+  `payment_method` enum('card','ewallet','cash') NOT NULL,
+  `payment_date` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: staff_assigned_orders
+-- Description: Order assignments to staff members
+-- ----------------------------------------------------------------------------
+CREATE TABLE `staff_assigned_orders` (
+  `user_id` int(11) DEFAULT NULL,
+  `order_id` int(11) DEFAULT NULL,
+  `status` enum('ASSIGNED','COMPLETED') DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- AUDIT/LOG TABLES
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Table: customer_deletion_log
+-- Description: Logs deleted customer accounts for audit purposes
+-- ----------------------------------------------------------------------------
+CREATE TABLE `customer_deletion_log` (
+  `user_id` int(11) NOT NULL,
+  `first_name` varchar(45) DEFAULT NULL,
+  `last_name` varchar(45) DEFAULT NULL,
+  `deletion_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: customer_edit_log
+-- Description: Logs changes to customer information
+-- ----------------------------------------------------------------------------
+CREATE TABLE `customer_edit_log` (
+  `log_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `old_first_name` varchar(255) DEFAULT NULL,
+  `new_first_name` varchar(255) DEFAULT NULL,
+  `old_last_name` varchar(255) DEFAULT NULL,
+  `new_last_name` varchar(255) DEFAULT NULL,
+  `edit_time` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: inventory_log
+-- Description: Tracks all inventory changes for products
+-- ----------------------------------------------------------------------------
+CREATE TABLE `inventory_log` (
+  `product_code` int(11) NOT NULL,
+  `old_qty` int(11) DEFAULT NULL,
+  `new_qty` int(11) DEFAULT NULL,
+  `change_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: order_status_log
+-- Description: Tracks all order status changes
+-- ----------------------------------------------------------------------------
+CREATE TABLE `order_status_log` (
+  `order_id` int(11) NOT NULL,
+  `old_status` varchar(45) DEFAULT NULL,
+  `new_status` varchar(45) DEFAULT NULL,
+  `change_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- Table: product_deletion_log
+-- Description: Logs deleted products for audit purposes
+-- ----------------------------------------------------------------------------
+CREATE TABLE `product_deletion_log` (
+  `product_code` int(11) NOT NULL,
+  `product_name` varchar(45) DEFAULT NULL,
+  `category_code` int(11) DEFAULT NULL,
+  `description` varchar(45) DEFAULT NULL,
+  `deletion_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- TRIGGERS
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Trigger: order_status_logging_trigger
+-- Description: Automatically logs order status changes
+-- Table: orders (AFTER UPDATE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `order_status_logging_trigger` AFTER UPDATE ON `orders` FOR EACH ROW 
+BEGIN
+   IF OLD.order_status != NEW.order_status THEN
+      INSERT INTO order_status_log (order_id, old_status, new_status, change_date)
+      VALUES (NEW.order_id, OLD.order_status, NEW.order_status, NOW());
+   END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: inventory_adjustment_trigger
+-- Description: Automatically logs inventory changes
+-- Table: products (AFTER UPDATE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `inventory_adjustment_trigger` AFTER UPDATE ON `products` FOR EACH ROW 
+BEGIN
+   IF OLD.stock_qty != NEW.stock_qty THEN
+      INSERT INTO inventory_log (product_code, old_qty, new_qty, change_date)
+      VALUES (NEW.product_code, OLD.stock_qty, NEW.stock_qty, current_timestamp());
+   END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: prevent_negative_inventory
+-- Description: Prevents stock quantity from going negative
+-- Table: products (BEFORE UPDATE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `prevent_negative_inventory` BEFORE UPDATE ON `products` FOR EACH ROW 
+BEGIN
+   -- Ensure that the new stock quantity is not negative
+   IF NEW.stock_qty < 0 THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock quantity cannot be negative';
+   END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: product_deletion_log_trigger
+-- Description: Logs product deletions for audit purposes
+-- Table: products (AFTER DELETE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `product_deletion_log_trigger` AFTER DELETE ON `products` FOR EACH ROW 
+BEGIN
+  INSERT INTO product_deletion_log (
+    product_code, product_name, category_code,
+    description, deletion_date
+  )
+  VALUES (
+    OLD.product_code, OLD.product_name, OLD.category_code,
+    OLD.description, CURRENT_TIMESTAMP()
+  );
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: customer_deletion_log_trigger
+-- Description: Logs customer deletions for audit purposes
+-- Table: users (AFTER DELETE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `customer_deletion_log_trigger` AFTER DELETE ON `users` FOR EACH ROW 
+BEGIN
+   INSERT INTO customer_deletion_log (user_id, first_name, last_name, deletion_date)
+   VALUES (OLD.user_id, OLD.first_name, OLD.last_name, CURRENT_TIMESTAMP());
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: log_customer_edits
+-- Description: Logs changes to customer names
+-- Table: users (AFTER UPDATE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `log_customer_edits` AFTER UPDATE ON `users` FOR EACH ROW 
+BEGIN
+    IF LOWER(OLD.user_role) = 'customer' AND (
+        OLD.first_name <> NEW.first_name OR
+        OLD.last_name <> NEW.last_name
+    ) THEN
+        INSERT INTO customer_edit_log (
+            user_id,
+            old_first_name,
+            new_first_name,
+            old_last_name,
+            new_last_name
+        ) VALUES (
+            OLD.user_id,
+            OLD.first_name,
+            NEW.first_name,
+            OLD.last_name,
+            NEW.last_name
+        );
+    END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: check_assignedorders
+-- Description: Prevents duplicate order assignments
+-- Table: staff_assigned_orders (BEFORE INSERT)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `check_assignedorders` BEFORE INSERT ON `staff_assigned_orders` FOR EACH ROW 
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM staff_assigned_orders
+        WHERE order_id = NEW.order_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Order is already assigned to a staff member.';
+    END IF;
+END$$
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- Trigger: validate_order_completion
+-- Description: Ensures orders can only be marked complete when delivered
+-- Table: staff_assigned_orders (BEFORE UPDATE)
+-- ----------------------------------------------------------------------------
+DELIMITER $$
+CREATE TRIGGER `validate_order_completion` BEFORE UPDATE ON `staff_assigned_orders` FOR EACH ROW 
+BEGIN
+    IF NEW.status = 'COMPLETED' THEN
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM orders 
+            WHERE order_id = NEW.order_id 
+            AND order_status = 'Delivered'
+        ) THEN
+            SIGNAL SQLSTATE '45000' 
+            SET MESSAGE_TEXT = 'Cannot mark order as COMPLETED. Order must be in Delivered status first.';
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+
+-- ============================================================================
+-- INDEXES AND PRIMARY KEYS
+-- ============================================================================
+
+-- Categories table indexes
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`category_code`);
+
+-- Currencies table indexes
+ALTER TABLE `currencies`
+  ADD PRIMARY KEY (`currency_code`);
+
+-- Users table indexes
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`user_id`),
+  ADD UNIQUE KEY `user_id_UNIQUE` (`user_id`);
+
+-- Products table indexes
+ALTER TABLE `products`
+  ADD PRIMARY KEY (`product_code`),
+  ADD KEY `category_code_idx` (`category_code`);
+
+-- Cart table indexes
+ALTER TABLE `cart`
+  ADD PRIMARY KEY (`cart_id`),
+  ADD UNIQUE KEY `unique_user_product` (`user_id`,`product_code`),
+  ADD KEY `product_code` (`product_code`);
+
+-- isfavorite table indexes
+ALTER TABLE `isfavorite`
+  ADD PRIMARY KEY (`user_id`,`product_code`),
+  ADD KEY `product_code_idx` (`product_code`);
+
+-- Orders table indexes
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`order_id`),
+  ADD KEY `user_id_idx` (`user_id`),
+  ADD KEY `currency_code_idx` (`currency_code`);
+
+-- Order_items table indexes
+ALTER TABLE `order_items`
+  ADD PRIMARY KEY (`order_item_id`),
+  ADD KEY `product_code_idx` (`product_code`),
+  ADD KEY `idx_order_id` (`order_id`),
+  ADD KEY `idx_product_code` (`product_code`);
+
+-- Payments table indexes
+ALTER TABLE `payments`
+  ADD PRIMARY KEY (`payment_id`),
+  ADD KEY `fk_payments_currency_code` (`currency_code`),
+  ADD KEY `fk_payments_order_id` (`order_id`);
+
+-- Audit/Log table indexes
+ALTER TABLE `customer_deletion_log`
+  ADD PRIMARY KEY (`user_id`);
+
+ALTER TABLE `customer_edit_log`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `user_id` (`user_id`);
+
+ALTER TABLE `inventory_log`
+  ADD PRIMARY KEY (`product_code`,`change_date`),
+  ADD KEY `change_date_idx` (`change_date`);
+
+ALTER TABLE `order_status_log`
+  ADD PRIMARY KEY (`order_id`,`change_date`),
+  ADD KEY `change_date_idx` (`change_date`);
+
+ALTER TABLE `product_deletion_log`
+  ADD PRIMARY KEY (`product_code`);
+
+-- ============================================================================
+-- AUTO_INCREMENT SETTINGS
+-- ============================================================================
+
+ALTER TABLE `cart`
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `customer_edit_log`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `orders`
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `order_items`
+  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `payments`
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `products`
+  MODIFY `product_code` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `users`
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
+
+-- ============================================================================
+-- FOREIGN KEY CONSTRAINTS
+-- ============================================================================
+
+-- Cart table constraints
+ALTER TABLE `cart`
+  ADD CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `cart_ibfk_2` FOREIGN KEY (`product_code`) REFERENCES `products` (`product_code`);
+
+-- Customer edit log constraints
+ALTER TABLE `customer_edit_log`
+  ADD CONSTRAINT `customer_edit_log_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+-- isfavorite table constraints
+ALTER TABLE `isfavorite`
+  ADD CONSTRAINT `fk_isfavorite_product_code` FOREIGN KEY (`product_code`) REFERENCES `products` (`product_code`),
+  ADD CONSTRAINT `fk_isfavorite_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+-- Orders table constraints
+ALTER TABLE `orders`
+  ADD CONSTRAINT `currency_code` FOREIGN KEY (`currency_code`) REFERENCES `currencies` (`currency_code`),
+  ADD CONSTRAINT `user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+-- Order_items table constraints
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `fk_order_items_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`),
+  ADD CONSTRAINT `fk_order_items_product_code` FOREIGN KEY (`product_code`) REFERENCES `products` (`product_code`);
+
+-- Payments table constraints
+ALTER TABLE `payments`
+  ADD CONSTRAINT `fk_payments_currency_code` FOREIGN KEY (`currency_code`) REFERENCES `currencies` (`currency_code`),
+  ADD CONSTRAINT `fk_payments_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`);
+
+-- Products table constraints
+ALTER TABLE `products`
+  ADD CONSTRAINT `category_code` FOREIGN KEY (`category_code`) REFERENCES `categories` (`category_code`);
+
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

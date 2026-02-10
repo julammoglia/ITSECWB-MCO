@@ -1,0 +1,515 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f5f7fa;
+  color: #2d3748;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Back navigation */
+.back-nav {
+  margin-bottom: 2rem;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #4a5568;
+  color: white;
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: #2d3748;
+  transform: translateY(-1px);
+}
+
+/* User Profile Header */
+.user-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.user-details h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 0.25rem;
+}
+
+.member-since {
+  color: #718096;
+  font-size: 1rem;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  background: white;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #718096;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background: #edf2f7;
+  color: #2d3748;
+}
+
+/* Tab Content */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Profile Section */
+.profile-section {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.edit-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Profile Form */
+.profile-form {
+  padding: 2rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  background: #f7fafc;
+  color: #2d3748;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  background: white;
+}
+
+.field-menu-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.edit-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f6d55c;
+  color: #2d3748;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-profile-btn:hover {
+  background: #ecc94b;
+  transform: translateY(-1px);
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #718096;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  border-color: #e53e3e;
+  color: #e53e3e;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Orders Section */
+.orders-section {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.orders-list {
+  padding: 1rem 2rem 2rem;
+}
+
+.order-card {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.order-info h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.order-date {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.completed {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-badge.shipped {
+  background: #bee3f8;
+  color: #2a4365;
+}
+
+.status-badge.processing {
+  background: #faf089;
+  color: #744210;
+}
+
+.status-badge.ordered {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.order-amount {
+  margin-bottom: 1.5rem;
+}
+
+.amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.currency-note {
+  display: block;
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 0.25rem;
+}
+
+/* Order Progress */
+.order-progress {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.order-progress::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.progress-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.step-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.progress-step.completed .step-dot {
+  background: #48bb78;
+}
+
+.step-label {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.progress-step.completed .step-label {
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.step-label small {
+  display: block;
+  font-size: 0.7rem;
+  color: #a0aec0;
+  margin-top: 0.125rem;
+}
+
+.view-details-btn {
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-details-btn:hover {
+  background: #3182ce;
+  transform: translateY(-1px);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #718096;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  font-size: 0.95rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .user-profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: center;
+  }
+  
+  .user-profile-header .user-details {
+    text-align: left;
+  }
+  
+  .tab-navigation {
+    max-width: 100%;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .profile-form,
+  .orders-list {
+    padding: 1rem;
+  }
+  
+  .order-progress {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .order-progress::before {
+    display: none;
+  }
+  
+  .progress-step {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .step-dot {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  
+  .step-label {
+    text-align: left;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
