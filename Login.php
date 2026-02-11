@@ -24,7 +24,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
         $stmt->bind_result($user_id, $hashed_password, $user_role, $first_name, $last_name);
         $stmt->fetch();
 
-        if ($password === $hashed_password) {
+        // Verify the entered password against the stored bcrypt hash (salt is handled internally)
+        if (password_verify($password, $hashed_password)) {
             $_SESSION['user_id'] = $user_id;
             $_SESSION['user_role'] = $user_role;
             $_SESSION['first_name'] = $first_name;
@@ -92,9 +93,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
         if ($stmt->num_rows > 0) {
             $register_error = "An account with this email already exists.";
         } else {
+            // Hash the password using bcrypt; a unique salt is auto-generated and embedded in the hash
+            $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+
             // Insert new user (default customer role)
             $insert_stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, 'Customer')");
-            $insert_stmt->bind_param("ssss", $firstName, $lastName, $email, $password);
+            $insert_stmt->bind_param("ssss", $firstName, $lastName, $email, $passwordHash);
             
             if ($insert_stmt->execute()) {
                 $register_success = "Account created successfully! You can now sign in with your credentials.";
@@ -131,10 +135,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             $stmt->bind_result($user_id, $hashed_password);
             $stmt->fetch();
 
-            if ($old_password === $hashed_password) {
-                // Update with new password
+            // Verify the provided old password against the stored hash (bcrypt handles salt internally)
+            if (password_verify($old_password, $hashed_password)) {
+                // Hash the new password using bcrypt; salt is automatic and embedded in the hash
+                $newPasswordHash = password_hash($new_password, PASSWORD_BCRYPT);
                 $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-                $update_stmt->bind_param("ss", $new_password, $email);
+                $update_stmt->bind_param("ss", $newPasswordHash, $email);
                 
                 if ($update_stmt->execute()) {
                     $forgot_password_success = "Password updated successfully. You can now login with your new password.";
