@@ -5,6 +5,59 @@ require_once 'includes/db.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     $userId = $_SESSION['user_id'];
 
+    // Branch by action: profile update or password change
+    $action = isset($_POST['action']) ? $_POST['action'] : 'update_profile';
+
+    if ($action === 'change_password') {
+        // Change password flow
+        $old = isset($_POST['old_password']) ? $_POST['old_password'] : '';
+        $new = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+        $confirm = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+
+        // Basic validation
+        if ($new !== $confirm || strlen($new) < 6) {
+            header("Location: User.php?pwd=invalid");
+            exit();
+        }
+
+        // Fetch current hash
+        $stmt = $conn->prepare("SELECT password FROM users WHERE user_id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $stmt->store_result();
+        if ($stmt->num_rows === 0) {
+            header("Location: User.php?pwd=notfound");
+            exit();
+        }
+        $stmt->bind_result($currentHash);
+        $stmt->fetch();
+
+        // Verify old password
+        if (!password_verify($old, $currentHash)) {
+            header("Location: User.php?pwd=old_incorrect");
+            exit();
+        }
+
+        // Prevent using the same password as the current one
+        if (password_verify($new, $currentHash)) {
+            header("Location: User.php?pwd=same");
+            exit();
+        }
+
+        // Hash and update new password
+        $newHash = password_hash($new, PASSWORD_BCRYPT);
+        $up = $conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
+        $up->bind_param("si", $newHash, $userId);
+        if ($up->execute()) {
+            header("Location: User.php?pwd=success");
+            exit();
+        } else {
+            header("Location: User.php?pwd=fail");
+            exit();
+        }
+    }
+
+    // Default: profile update flow
     // Clean input
     $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
     $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;

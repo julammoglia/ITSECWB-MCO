@@ -254,6 +254,46 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         transform: translateY(0);
       }
     }
+
+    /* Alert styles */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 12px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      font-size: 0.95rem;
+    }
+    .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .alert .alert-close {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    /* Arrange actions: Edit + Change on the left, Logout on the right */
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .form-actions .action-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
   </style>
 </head>
 
@@ -299,6 +339,76 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           <a href="delete_account.php" onclick="return confirm('Are you sure you want to delete your account?')" class="delete-btn">
             <i class="fas fa-trash-alt"></i> Delete Account
           </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="changePasswordModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Change Password</h2>
+      <button class="close-btn" onclick="closeChangePasswordModal()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="modal-body">
+      <?php if (isset($_GET['pwd'])): 
+        $pwd = $_GET['pwd'];
+        $messages = [
+          'success' => ['type' => 'success', 'text' => 'Password updated successfully.'],
+          'old_incorrect' => ['type' => 'error', 'text' => 'Current password is incorrect.'],
+          'invalid' => ['type' => 'error', 'text' => 'New password is invalid or does not match confirmation.'],
+          'same' => ['type' => 'warning', 'text' => 'New password must be different from the current password.'],
+          'fail' => ['type' => 'error', 'text' => 'Failed to update password. Please try again.']
+        ];
+        $msg = $messages[$pwd] ?? null;
+        if ($msg): ?>
+          <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>">
+            <i class="fas <?= $msg['type']==='success' ? 'fa-check-circle' : ($msg['type']==='warning' ? 'fa-exclamation-triangle' : 'fa-times-circle') ?>"></i>
+            <?= htmlspecialchars($msg['text']) ?>
+            <button class="alert-close" onclick="this.parentElement.style.display='none'">&times;</button>
+          </div>
+      <?php endif; endif; ?>
+      <form id="changePasswordForm" action="edit_profile.php" method="post">
+        <input type="hidden" name="action" value="change_password">
+
+        <div class="form-group">
+          <label for="old_password">Current Password</label>
+          <div class="input-wrapper">
+            <div class="input-icon"><i class="fas fa-lock"></i></div>
+            <input type="password" id="old_password" name="old_password" placeholder="Enter your current password" required>
+            <button type="button" class="toggle-password" onclick="togglePassword('old_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="new_password">New Password</label>
+          <div class="input-wrapper">
+            <div class="input-icon"><i class="fas fa-key"></i></div>
+            <input type="password" id="new_password" name="new_password" placeholder="Enter your new password" minlength="8" required>
+            <button type="button" class="toggle-password" onclick="togglePassword('new_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Retype New Password</label>
+          <div class="input-wrapper">
+            <div class="input-icon"><i class="fas fa-key"></i></div>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Retype your new password" minlength="8" required>
+            <button type="button" class="toggle-password" onclick="togglePassword('confirm_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
+          </div>
+          <small id="passwordMismatch" style="display:none; color:#ef4444; margin-top:0.25rem;">New password and retype do not match.</small>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="save-btn">
+            <i class="fas fa-save"></i> Confirm Change
+          </button>
+          <button type="button" class="delete-btn" onclick="closeChangePasswordModal()">
+            <i class="fas fa-times"></i> Cancel
+          </button>
         </div>
       </form>
     </div>
@@ -361,16 +471,24 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           </div>
                     
           <div class="form-actions">
-            <button class="edit-profile-btn" onclick="openModal()">
-              <i class="fas fa-edit btn-icon"></i>
-              Edit Profile
-            </button>
-            
-            <button class="logout-btn" onclick="return confirmLogout()">
-              <a href="?logout=1" style="text-decoration: none; color: inherit;">
-                <i class="fas fa-sign-out-alt"></i> Logout
-              </a>
-            </button>
+            <div class="action-group">
+              <button class="edit-profile-btn" onclick="openModal()">
+                <i class="fas fa-edit btn-icon"></i>
+                Edit Profile
+              </button>
+
+              <button class="logout-btn" onclick="openChangePasswordModal()">
+                <i class="fas fa-key"></i> Change Password
+              </button>
+            </div>
+
+            <div class="action-group">
+              <button class="logout-btn" onclick="return confirmLogout()" style="background: #ffffff; color: #ef4444; border: 1px solid #fecaca;">
+                <a href="?logout=1" style="text-decoration: none; color: inherit;">
+                  <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -504,10 +622,87 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
       document.getElementById("editProfileModal").style.display = "none";
     }
 
+    function openChangePasswordModal() {
+      document.getElementById("changePasswordModal").style.display = "block";
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById("changePasswordModal").style.display = "none";
+    }
+
+    // Auto-open Change Password modal if redirected with a pwd status
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('pwd')) {
+        openChangePasswordModal();
+      }
+    })();
+
+    function togglePassword(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    // Client-side validation for matching passwords
+    const newPwd = document.getElementById('new_password');
+    const confirmPwd = document.getElementById('confirm_password');
+    const mismatchMsg = document.getElementById('passwordMismatch');
+    const form = document.getElementById('changePasswordForm');
+
+    function checkMatch() {
+      if (!newPwd || !confirmPwd) return true;
+      const bothFilled = newPwd.value.length > 0 && confirmPwd.value.length > 0;
+      const match = newPwd.value === confirmPwd.value;
+      if (mismatchMsg) {
+        // Only show mismatch message if both fields have been filled
+        mismatchMsg.style.display = (bothFilled && !match) ? 'block' : 'none';
+      }
+      // Only set validity when both are filled; otherwise keep neutral so form UX isn't aggressive
+      confirmPwd.setCustomValidity(bothFilled && !match ? 'Passwords do not match' : '');
+      return !bothFilled || match;
+    }
+
+    if (newPwd && confirmPwd) {
+      newPwd.addEventListener('input', checkMatch);
+      confirmPwd.addEventListener('input', checkMatch);
+    }
+
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        // Validate new/confirm match first
+        if (!checkMatch()) {
+          e.preventDefault();
+          return;
+        }
+        // Prompt if new equals old password
+        const oldPwd = document.getElementById('old_password');
+        if (oldPwd && newPwd && oldPwd.value.length > 0 && newPwd.value.length > 0 && oldPwd.value === newPwd.value) {
+          const proceed = confirm('New password must be different from the current password. Do you want to continue?');
+          if (!proceed) {
+            e.preventDefault();
+            return;
+          }
+        }
+      });
+    }
+
     window.onclick = function (event) {
-      const modal = document.getElementById("editProfileModal");
-      if (event.target == modal) {
-        modal.style.display = "none";
+      const editModal = document.getElementById("editProfileModal");
+      const changeModal = document.getElementById("changePasswordModal");
+      if (event.target == editModal) {
+        editModal.style.display = "none";
+      }
+      if (event.target == changeModal) {
+        changeModal.style.display = "none";
       }
     }
   </script>
