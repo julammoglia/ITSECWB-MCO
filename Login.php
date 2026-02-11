@@ -58,10 +58,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
             </script>";
             exit;
         } else {
-            $login_error = "Incorrect password.";
+            $login_error = "Invalid email and/or password";
         }
     } else {
-        $login_error = "No account found with that email.";
+        $login_error = "Invalid email and/or password";
     }
     $stmt->close();
 }
