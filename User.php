@@ -20,7 +20,7 @@ $current_currency = getCurrencyData($conn);
 $userId = $_SESSION['user_id'];
 
 // Fetch user profile
-$stmt = $conn->prepare("SELECT user_id, user_role, first_name, last_name, email, password FROM users WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT user_id, user_role, first_name, last_name, email, password, profile_picture FROM users WHERE user_id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $userResult = $stmt->get_result()->fetch_assoc();
@@ -266,7 +266,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
     </div>
 
     <div class="modal-body">
-      <form action="edit_profile.php" method="post">
+      <form action="edit_profile.php" method="post" enctype="multipart/form-data">
         <div class="form-group">
           <label for="edit_first_name">First Name</label>
           <div class="input-wrapper">
@@ -281,6 +281,15 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
             <div class="input-icon"><i class="fas fa-user"></i></div>
             <input type="text" id="edit_last_name" name="last_name" value="<?= htmlspecialchars($userResult['last_name']) ?>" placeholder="Enter your last name">
           </div>
+        </div>
+
+        <div class="form-group">
+          <label for="profile_picture">Profile Picture</label>
+          <div class="input-wrapper">
+            <div class="input-icon"><i class="fas fa-camera"></i></div>
+            <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg,image/png" style="padding-left: 2.5rem;">
+          </div>
+          <small style="color: #9ca3af; margin-top: 0.25rem; display: block;">Max 2MB. JPG, JPEG, or PNG only.</small>
         </div>
 
         <div class="modal-actions">
@@ -308,7 +317,11 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
     
     <!-- User header with avatar and member info -->
     <div class="user-profile-header">
-      <div class="avatar-large"><?= $userInitials ?></div>
+      <?php if (!empty($userResult['profile_picture'])): ?>
+        <img src="uploads/profile_pictures/<?= htmlspecialchars($userResult['profile_picture']) ?>" alt="Profile" class="avatar-large">
+      <?php else: ?>
+        <div class="avatar-large"><?= $userInitials ?></div>
+      <?php endif; ?>
       <div class="user-details">
         <h1><?= htmlspecialchars($fullName) ?></h1>
         <p class="member-since">Member since <?= date('n/j/Y') ?></p>
