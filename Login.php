@@ -15,8 +15,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
     
-    // Rate limit: login (5 per 10 minutes)
-    $rl_result = rate_limit($conn, 'login', 5, 600);
+    // Rate limit: login (8 per 10 minutes)
+    $rl_result = rate_limit($conn, 'login', 8, 600);
     if (!$rl_result['allowed']) {
         $login_error = send_rate_limit_error($rl_result['retry_after'], $email, 'login')['error'];
     } else {
@@ -75,137 +75,149 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
 
 // Handle registration form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
-    $firstName = trim($_POST['firstName']);
-    $lastName = trim($_POST['lastName']);
-    $email = trim($_POST['regEmail']);
-    $password = $_POST['regPassword'];
-    $confirmPassword = $_POST['confirmPassword'];
-
-    // Validation
-    if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
-        $register_error = "All fields are required.";
-    } elseif (strlen($password) < 6) {
-        $register_error = "Password must be at least 6 characters long.";
-    } elseif ($password !== $confirmPassword) {
-        $register_error = "Passwords do not match.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $register_error = "Please enter a valid email address.";
+    // Rate limit: register (5 per 10 minutes)
+    $rl_result = rate_limit($conn, 'register', 5, 600);
+    if (!$rl_result['allowed']) {
+        $register_error = send_rate_limit_error($rl_result['retry_after'], $_POST['regEmail'] ?? '', 'register')['error'];
     } else {
-        // Check if email already exists
-        $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
+        $firstName = trim($_POST['firstName']);
+        $lastName = trim($_POST['lastName']);
+        $email = trim($_POST['regEmail']);
+        $password = $_POST['regPassword'];
+        $confirmPassword = $_POST['confirmPassword'];
 
-        if ($stmt->num_rows > 0) {
-            $register_error = "An account with this email already exists.";
+        // Validation
+        if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
+            $register_error = "All fields are required.";
+        } elseif (strlen($password) < 6) {
+            $register_error = "Password must be at least 6 characters long.";
+        } elseif ($password !== $confirmPassword) {
+            $register_error = "Passwords do not match.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $register_error = "Please enter a valid email address.";
         } else {
-            // Hash the password using bcrypt; a unique salt is auto-generated and embedded in the hash
-            $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+            // Check if email already exists
+            $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $stmt->store_result();
 
-            // Insert new user (default customer role)
-            $insert_stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, 'Customer')");
-            $insert_stmt->bind_param("ssss", $firstName, $lastName, $email, $passwordHash);
-            
-            if ($insert_stmt->execute()) {
-                $newUserId = $conn->insert_id;
-
-                // Handle profile picture upload if provided
-                if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES['profile_picture'];
-                    $uploadDir = __DIR__ . '/uploads/profile_pictures/';
-
-                    $validUpload = true;
-
-                    // Validate file size (max 2MB)
-                    if ($file['size'] > 2 * 1024 * 1024) {
-                        $validUpload = false;
-                    }
-
-                    // Validate MIME type
-                    if ($validUpload) {
-                        $finfo = new finfo(FILEINFO_MIME_TYPE);
-                        $mimeType = $finfo->file($file['tmp_name']);
-                        if (!in_array($mimeType, ['image/jpeg', 'image/png'])) {
-                            $validUpload = false;
-                        }
-                    }
-
-                    // Validate file extension
-                    if ($validUpload) {
-                        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                        if (!in_array($ext, ['jpg', 'jpeg', 'png'])) {
-                            $validUpload = false;
-                        }
-                    }
-
-                    if ($validUpload) {
-                        $newFilename = 'user_' . $newUserId . '_' . time() . '.' . $ext;
-                        $destination = $uploadDir . $newFilename;
-
-                        if (move_uploaded_file($file['tmp_name'], $destination)) {
-                            $picStmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE user_id = ?");
-                            $picStmt->bind_param("si", $newFilename, $newUserId);
-                            $picStmt->execute();
-                            $picStmt->close();
-                        }
-                    }
-                }
-
-                $register_success = "Account created successfully! You can now sign in with your credentials.";
-                // Clear form data after successful registration
-                $_POST = array();
+            if ($stmt->num_rows > 0) {
+                $register_error = "An account with this email already exists.";
             } else {
-                $register_error = "Something went wrong. Please try again.";
+                // Hash the password using bcrypt; a unique salt is auto-generated and embedded in the hash
+                $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+
+                // Insert new user (default customer role)
+                $insert_stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, 'Customer')");
+                $insert_stmt->bind_param("ssss", $firstName, $lastName, $email, $passwordHash);
+                
+                if ($insert_stmt->execute()) {
+                    $newUserId = $conn->insert_id;
+
+                    // Handle profile picture upload if provided
+                    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+                        $file = $_FILES['profile_picture'];
+                        $uploadDir = __DIR__ . '/uploads/profile_pictures/';
+
+                        $validUpload = true;
+
+                        // Validate file size (max 2MB)
+                        if ($file['size'] > 2 * 1024 * 1024) {
+                            $validUpload = false;
+                        }
+
+                        // Validate MIME type
+                        if ($validUpload) {
+                            $finfo = new finfo(FILEINFO_MIME_TYPE);
+                            $mimeType = $finfo->file($file['tmp_name']);
+                            if (!in_array($mimeType, ['image/jpeg', 'image/png'])) {
+                                $validUpload = false;
+                            }
+                        }
+
+                        // Validate file extension
+                        if ($validUpload) {
+                            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                            if (!in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                                $validUpload = false;
+                            }
+                        }
+
+                        if ($validUpload) {
+                            $newFilename = 'user_' . $newUserId . '_' . time() . '.' . $ext;
+                            $destination = $uploadDir . $newFilename;
+
+                            if (move_uploaded_file($file['tmp_name'], $destination)) {
+                                $picStmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE user_id = ?");
+                                $picStmt->bind_param("si", $newFilename, $newUserId);
+                                $picStmt->execute();
+                                $picStmt->close();
+                            }
+                        }
+                    }
+
+                    $register_success = "Account created successfully! You can now sign in with your credentials.";
+                    // Clear form data after successful registration
+                    $_POST = array();
+                } else {
+                    $register_error = "Something went wrong. Please try again.";
+                }
+                $insert_stmt->close();
             }
-            $insert_stmt->close();
+            $stmt->close();
         }
-        $stmt->close();
     }
 }
 
 // Handle forgot password form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
-    $email = trim($_POST['email']);
-    $old_password = $_POST['oldPassword'];
-    $new_password = $_POST['newPassword'];
-
-    // Validation
-    if (empty($email) || empty($old_password) || empty($new_password)) {
-        $forgot_password_error = "All fields are required.";
-    } elseif (strlen($new_password) < 6) {
-        $forgot_password_error = "New password must be at least 6 characters long.";
+    // Rate limit: forgot password (8 per 10 minutes)
+    $rl_result = rate_limit($conn, 'forgot_password', 8, 600);
+    if (!$rl_result['allowed']) {
+        $forgot_password_error = send_rate_limit_error($rl_result['retry_after'], $_POST['email'] ?? '', 'forgot_password')['error'];
     } else {
-        // Check if email exists
-        $stmt = $conn->prepare("SELECT user_id, password FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
+        $email = trim($_POST['email']);
+        $old_password = $_POST['oldPassword'];
+        $new_password = $_POST['newPassword'];
 
-        if ($stmt->num_rows === 1) {
-            $stmt->bind_result($user_id, $hashed_password);
-            $stmt->fetch();
-
-            // Verify the provided old password against the stored hash (bcrypt handles salt internally)
-            if (password_verify($old_password, $hashed_password)) {
-                // Hash the new password using bcrypt; salt is automatic and embedded in the hash
-                $newPasswordHash = password_hash($new_password, PASSWORD_BCRYPT);
-                $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-                $update_stmt->bind_param("ss", $newPasswordHash, $email);
-                
-                if ($update_stmt->execute()) {
-                    $forgot_password_success = "Password updated successfully. You can now login with your new password.";
-                } else {
-                    $forgot_password_error = "Something went wrong. Please try again.";
-                }
-                $update_stmt->close();
-            } else {
-                $forgot_password_error = "Old password is incorrect.";
-            }
+        // Validation
+        if (empty($email) || empty($old_password) || empty($new_password)) {
+            $forgot_password_error = "All fields are required.";
+        } elseif (strlen($new_password) < 6) {
+            $forgot_password_error = "New password must be at least 6 characters long.";
         } else {
-            $forgot_password_error = "No account found with that email.";
+            // Check if email exists
+            $stmt = $conn->prepare("SELECT user_id, password FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $stmt->store_result();
+
+            if ($stmt->num_rows === 1) {
+                $stmt->bind_result($user_id, $hashed_password);
+                $stmt->fetch();
+
+                // Verify the provided old password against the stored hash (bcrypt handles salt internally)
+                if (password_verify($old_password, $hashed_password)) {
+                    // Hash the new password using bcrypt; salt is automatic and embedded in the hash
+                    $newPasswordHash = password_hash($new_password, PASSWORD_BCRYPT);
+                    $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+                    $update_stmt->bind_param("ss", $newPasswordHash, $email);
+                    
+                    if ($update_stmt->execute()) {
+                        $forgot_password_success = "Password updated successfully. You can now login with your new password.";
+                    } else {
+                        $forgot_password_error = "Something went wrong. Please try again.";
+                    }
+                    $update_stmt->close();
+                } else {
+                    $forgot_password_error = "Old password is incorrect.";
+                }
+            } else {
+                $forgot_password_error = "No account found with that email.";
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 }
 
@@ -246,7 +258,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             </div>
 
             <div class="terms">
-                <a href="#" id="forgotPasswordLink" onclick="toggleForm('forgotPassword')">Forgot password?</a>
+                <a href="#" id="forgotPasswordLink" onclick="toggleForm('forgotPassword')">Reset Password?</a>
             </div>
             
             <?php if (!empty($login_error)) { echo "<p style='color: red; margin: 10px 0; font-size: 14px;'>$login_error</p>"; } ?>

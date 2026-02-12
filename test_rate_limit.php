@@ -60,6 +60,12 @@ require_once 'includes/rate_limit.php';
         button.danger:hover {
             background: #c82333;
         }
+        button.reset {
+            background: #6c757d;
+        }
+        button.reset:hover {
+            background: #5a6268;
+        }
         .result {
             margin-top: 15px;
             padding: 15px;
@@ -139,7 +145,24 @@ require_once 'includes/rate_limit.php';
         <div id="login-result"></div>
     </div>
 
-    
+    <div class="test-section">
+        <h2>Test 2: Registration Rate Limit (3 per 10 minutes)</h2>
+        <p>Simulates rapid registration attempts. Should block on the 4th request.</p>
+        <button onclick="testRegisterRateLimit()">Test Registration Rate Limit</button>
+        <button class="reset" onclick="resetRegisterCounter()">Reset Counter</button>
+        <span class="counter" id="register-counter">0/3</span>
+        <div id="register-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Forgot Password Rate Limit (3 per 10 minutes)</h2>
+        <p>Simulates rapid password reset attempts. Should block on the 4th request.</p>
+        <button onclick="testForgotPasswordRateLimit()">Test Forgot Password Rate Limit</button>
+        <button class="reset" onclick="resetForgotPasswordCounter()">Reset Counter</button>
+        <span class="counter" id="forgot-password-counter">0/3</span>
+        <div id="forgot-password-result"></div>
+    </div>
+
     <div class="test-section">
         <h2>Database Status</h2>
         <button onclick="checkDatabaseStatus()">Check Database</button>
@@ -162,6 +185,8 @@ require_once 'includes/rate_limit.php';
 
 <script>
     let loginCount = 0;
+    let registerCount = 0;
+    let forgotPasswordCount = 0;
 
     function testLoginRateLimit() {
         loginCount++;
@@ -189,7 +214,82 @@ require_once 'includes/rate_limit.php';
         });
     }
 
-    
+    function testRegisterRateLimit() {
+        registerCount++;
+        document.getElementById('register-counter').textContent = registerCount + '/3';
+        
+        fetch('test_rate_limit_api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'test=register'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultDiv = document.getElementById('register-result');
+            const resultClass = data.allowed ? 'success' : 'error';
+            const message = data.allowed 
+                ? `✓ Request ${registerCount} ALLOWED\nYou can register.`
+                : `✗ Request ${registerCount} BLOCKED\nRetry after: ${data.retry_after}s`;
+            
+            resultDiv.innerHTML = `<div class="result ${resultClass}">${message}</div>`;
+            
+            // Auto-refresh logs and table
+            setTimeout(() => {
+                viewLogs();
+                viewDatabaseTable();
+            }, 500);
+        })
+        .catch(error => {
+            document.getElementById('register-result').innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+        });
+    }
+
+    function resetRegisterCounter() {
+        registerCount = 0;
+        document.getElementById('register-counter').textContent = '0/3';
+        document.getElementById('register-result').innerHTML = '';
+    }
+
+    function testForgotPasswordRateLimit() {
+        forgotPasswordCount++;
+        document.getElementById('forgot-password-counter').textContent = forgotPasswordCount + '/3';
+        
+        fetch('test_rate_limit_api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'test=forgot_password'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultDiv = document.getElementById('forgot-password-result');
+            const resultClass = data.allowed ? 'success' : 'error';
+            const message = data.allowed 
+                ? `✓ Request ${forgotPasswordCount} ALLOWED\nYou can reset password.`
+                : `✗ Request ${forgotPasswordCount} BLOCKED\nRetry after: ${data.retry_after}s`;
+            
+            resultDiv.innerHTML = `<div class="result ${resultClass}">${message}</div>`;
+            
+            // Auto-refresh logs and table
+            setTimeout(() => {
+                viewLogs();
+                viewDatabaseTable();
+            }, 500);
+        })
+        .catch(error => {
+            document.getElementById('forgot-password-result').innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+        });
+    }
+
+    function resetForgotPasswordCounter() {
+        forgotPasswordCount = 0;
+        document.getElementById('forgot-password-counter').textContent = '0/3';
+        document.getElementById('forgot-password-result').innerHTML = '';
+    }
+
     function checkDatabaseStatus() {
         fetch('test_rate_limit_api.php', {
             method: 'POST',

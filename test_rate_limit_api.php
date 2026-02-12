@@ -11,6 +11,12 @@ switch ($test) {
     case 'login':
         testLoginRateLimit();
         break;
+    case 'register':
+        testRegisterRateLimit();
+        break;
+    case 'forgot_password':
+        testForgotPasswordRateLimit();
+        break;
     case 'db_status':
         checkDatabaseStatus();
         break;
@@ -29,11 +35,33 @@ switch ($test) {
 
 function testLoginRateLimit() {
     global $conn;
-    $result = rate_limit($conn, 'login', 5, 600);
+    $result = rate_limit($conn, 'login', 8, 600);
     echo json_encode([
         'allowed' => $result['allowed'],
         'retry_after' => $result['retry_after'],
         'limit' => 5,
+        'count' => $result['allowed'] ? 'N/A' : 'Limited'
+    ]);
+}
+
+function testRegisterRateLimit() {
+    global $conn;
+    $result = rate_limit($conn, 'register', 5, 600);
+    echo json_encode([
+        'allowed' => $result['allowed'],
+        'retry_after' => $result['retry_after'],
+        'limit' => 3,
+        'count' => $result['allowed'] ? 'N/A' : 'Limited'
+    ]);
+}
+
+function testForgotPasswordRateLimit() {
+    global $conn;
+    $result = rate_limit($conn, 'forgot_password', 8, 600);
+    echo json_encode([
+        'allowed' => $result['allowed'],
+        'retry_after' => $result['retry_after'],
+        'limit' => 3,
         'count' => $result['allowed'] ? 'N/A' : 'Limited'
     ]);
 }
