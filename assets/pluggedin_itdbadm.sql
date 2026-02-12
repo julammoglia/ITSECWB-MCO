@@ -490,6 +490,18 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`user_id`, `user_role`, `first_name`, `last_name`, `email`, `password`, `profile_picture`) VALUES
+(1, 'Customer', 'Alyssa', 'Mansueto', 'alyssa_mansueto@dlsu.edu.ph', 'alyssa', NULL),
+(2, 'Customer', 'Max', 'Balbastro', 'maxbalbastro@gmail.com', 'ilovejuls', NULL),
+(3, 'Admin', 'Brian', 'Lopez', 'brian_lopez@dlsu.edu.ph', 'brian', NULL),
+(4, 'Staff', 'Carla', 'Reyes', 'carla_reyes@dlsu.edu.ph', 'carla', NULL),
+(10, 'Customer', 'juls', 'Lammoglia', 'julstest@gmail.com', 'julianna', NULL),
+(11, 'Customer', 'juls', 'test', 'test@gmail.com', 'julianna', NULL);
+
+--
 -- Triggers `users`
 --
 DELIMITER $$
@@ -618,6 +630,32 @@ ALTER TABLE `products`
 --
 ALTER TABLE `product_deletion_log`
   ADD PRIMARY KEY (`product_code`);
+
+--
+-- Table structure for table `rate_limits`
+--
+
+CREATE TABLE `rate_limits` (
+  `id` int(11) NOT NULL,
+  `rl_key` varchar(120) NOT NULL,
+  `ip` varchar(45) NOT NULL,
+  `window_start` int(11) NOT NULL,
+  `count` int(11) NOT NULL DEFAULT 0,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Indexes for table `rate_limits`
+--
+ALTER TABLE `rate_limits`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_key_ip` (`rl_key`,`ip`);
+
+--
+-- AUTO_INCREMENT for table `rate_limits`
+--
+ALTER TABLE `rate_limits`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Indexes for table `users`
