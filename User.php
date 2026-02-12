@@ -324,12 +324,19 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         </div>
 
         <div class="form-group">
-          <label for="profile_picture">Profile Picture</label>
+          <label for="profile_picture">Profile Picture <small style="font-weight: 400; color: #9ca3af;">(max 2MB, JPG/JPEG/PNG)</small></label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-camera"></i></div>
-            <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg,image/png" style="padding-left: 2.5rem;">
+            <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg,image/png">
           </div>
-          <small style="color: #9ca3af; margin-top: 0.25rem; display: block;">Max 2MB. JPG, JPEG, or PNG only.</small>
+          <?php if (!empty($userResult['profile_picture'])): ?>
+            <div style="margin-top: 0.5rem;">
+              <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #ef4444; font-size: 0.85rem; font-weight: 400;">
+                <input type="checkbox" name="delete_picture" value="1" style="width: auto; accent-color: #ef4444;">
+                <i class="fas fa-trash-alt"></i> Remove current photo
+              </label>
+            </div>
+          <?php endif; ?>
         </div>
 
         <div class="modal-actions">

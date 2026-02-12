@@ -88,6 +88,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     $updateStmt->bind_param("ssi", $firstName, $lastName, $userId);
     $updateStmt->execute();
 
+    // Handle profile picture deletion
+    if (isset($_POST['delete_picture']) && $_POST['delete_picture'] === '1') {
+        if (!empty($current['profile_picture'])) {
+            $uploadDir = __DIR__ . '/uploads/profile_pictures/';
+            $oldFile = $uploadDir . $current['profile_picture'];
+            if (file_exists($oldFile)) {
+                unlink($oldFile);
+            }
+            $delStmt = $conn->prepare("UPDATE users SET profile_picture = NULL WHERE user_id = ?");
+            $delStmt->bind_param("i", $userId);
+            $delStmt->execute();
+        }
+        header("Location: User.php");
+        exit();
+    }
+
     // Handle profile picture upload
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['profile_picture'];

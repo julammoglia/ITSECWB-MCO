@@ -278,9 +278,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
                 <i onclick="togglePassword('confirmPassword')" class="fa fa-eye"></i>
             </div>
 
-            <label for="regProfilePicture">Profile Picture <small>(optional)</small></label>
+            <label for="regProfilePicture">Profile Picture <small>(optional — max 2MB, JPG/JPEG/PNG)</small></label>
             <input type="file" id="regProfilePicture" name="profile_picture" accept="image/jpeg,image/png">
-            <small style="color: #666; display: block; margin: 4px 0 10px;">Max 2MB. JPG, JPEG, or PNG only.</small>
 
             <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 14px; color: #666;">
                 <i class="fa fa-info-circle"></i> Your account will be created as a Customer account
