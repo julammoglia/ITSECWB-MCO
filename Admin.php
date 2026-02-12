@@ -80,14 +80,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               break;
 
             case 'add_staff':
-                // Add staff member
+                // Add staff/admin with secure password hashing
+                $first = $_POST['first_name'];
+                $last = $_POST['last_name'];
+                $email = $_POST['email'];
+                $rawPassword = $_POST['password'];
+                $role = $_POST['user_role'];
+
+                // Hash the password using bcrypt; unique salt embedded
+                $hashedPassword = password_hash($rawPassword, PASSWORD_BCRYPT);
+
                 $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, ?)");
                 $stmt->bind_param("sssss", 
-                    $_POST['first_name'], 
-                    $_POST['last_name'], 
-                    $_POST['email'], 
-                    $_POST['password'], 
-                    $_POST['user_role']
+                    $first,
+                    $last,
+                    $email,
+                    $hashedPassword,
+                    $role
                 );
                 if ($stmt->execute()) {
                     $success = "Staff member added successfully!";
