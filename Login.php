@@ -9,10 +9,28 @@ $forgot_password_success = "";
 $register_error = "";
 $register_success = "";
 
+// email validation helper (trim + lowercase)
+function normalize_email($email) {
+    return strtolower(trim((string)email));
+}
+
+// email validation helper (email format)
+funtion isValidEmail($email) {
+    retun filter_var($email, FILTER_VALIDATE_EMAIL);
+}
+
 // Handle login form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
-    $email = trim($_POST['email']);
+    $email = normalize_email($_POST['email'];)
+    // $email = trim($_POST['email']);
     $password = $_POST['password'];
+
+    // email validation before database query
+    if (empty($email) || empty($password)) {
+        $login_error = "Email and password ae required.";
+    } elseif (!isValidEmail($email)) {
+        $login_error = "Please enter a valid email address.";
+    } else {
 
     // to get user data
     $stmt = $conn->prepare("SELECT user_id, password, user_role, first_name, last_name FROM users WHERE email = ?");
@@ -64,19 +82,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
         $login_error = "Invalid email and/or password";
     }
     $stmt->close();
+    }
 }
 
 // Handle registration form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
     $firstName = trim($_POST['firstName']);
     $lastName = trim($_POST['lastName']);
-    $email = trim($_POST['regEmail']);
+    $email = normalize_email($_POST['regEmail']);
+    // $email = trim($_POST['regEmail']);
     $password = $_POST['regPassword'];
     $confirmPassword = $_POST['confirmPassword'];
 
     // Validation
     if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
         $register_error = "All fields are required.";
+    } elseif (!is_valid_email($email)) {
+        $register_error = "Please enter a valid email address.";
     } elseif (strlen($password) < 6) {
         $register_error = "Password must be at least 6 characters long.";
     } elseif ($password !== $confirmPassword) {
@@ -115,7 +137,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
 
 // Handle forgot password form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
-    $email = trim($_POST['email']);
+    // $email = trim($_POST['email']);
+    $email = normalize_email($_POST['email']);
     $old_password = $_POST['oldPassword'];
     $new_password = $_POST['newPassword'];
 
@@ -123,7 +146,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
     if (empty($email) || empty($old_password) || empty($new_password)) {
         $forgot_password_error = "All fields are required.";
     } elseif (strlen($new_password) < 6) {
-        $forgot_password_error = "New password must be at least 6 characters long.";
+        $forgot_password_error = "New password must be at least 6 characters long."; {    
+    } elseif (!isValidEmail($email)) {
+        $forgot_password_error = "Please enter a valid email address.";
     } else {
         // Check if email exists
         $stmt = $conn->prepare("SELECT user_id, password FROM users WHERE email = ?");

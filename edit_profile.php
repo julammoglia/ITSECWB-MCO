@@ -8,6 +8,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     // Branch by action: profile update or password change
     $action = isset($_POST['action']) ? $_POST['action'] : 'update_profile';
 
+    // Strict allowlist for action (reject unknown values)
+    $allowedActions = ['update_profile', 'change_password'];
+    if (!in_array($action, $allowedActions, true)) {
+        // Unknown/unsupported action value
+        header("Location: User.php?error=invalid_action");
+        exit();
+    }
+
     if ($action === 'change_password') {
         // Change password flow
         $old = isset($_POST['old_password']) ? $_POST['old_password'] : '';
@@ -61,6 +69,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     // Clean input
     $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
     $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;
+
+    //  Strict validation for first_name / last_name
+    //  Length bounds (1-50)
+    //  Allowed characters: Unicode letters + spaces + apostrophe + hyphen
+    //  Reject control characters
+    //  Normalize whitespace (collapse multiple spaces)
+    $validateName = function ($name) {
+        if ($name === null) return null;
+
+        // Normalize whitespace (collapse multiple spaces/tabs/newlines into a single space)
+        $name = preg_replace('/\s+/u', ' ', trim($name));
+              // Allow empty string (to keep current values later)
+        if ($name === '') return '';
+
+        // Reject ASCII control characters 
+        if (preg_match('/[\x00-\x1F\x7F]/u', $name)) {
+            return false;
+        }
+
+        // Length bounds (Unicode-safe)
+        if (mb_strlen($name, 'UTF-8') < 1 || mb_strlen($name, 'UTF-8') > 50) {
+            return false;
+        }
+
+        // Allowed characters:
+        // Must start with a letter
+        // Then letters/marks/spaces/apostrophe/hyphen up to 50 chars total
+        $pattern = "/^[\\p{L}][\\p{L}\\p{M}\\s'\\-]{0,49}$/u";
+        if (!preg_match($pattern, $name)) {
+            return false;
+        }
+
+        return $name;
+    };
+
+    $firstNameValidated = $validateName($firstName);
+    $lastNameValidated  = $validateName($lastName);
+
+    // If user provided a non-empty name that fails validation, reject.
+    if ($firstNameValidated === false || $lastNameValidated === false) {
+        header("Location: User.php?error=invalid_name");
+        exit();
+    }
+
+    // Replace with normalized validated values
+    $firstName = $firstNameValidated;
+    $lastName  = $lastNameValidated;
 
     // Get current values from database
     $stmt = $conn->prepare("SELECT first_name, last_name, profile_picture FROM users WHERE user_id = ?");
