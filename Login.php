@@ -101,6 +101,50 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             $insert_stmt->bind_param("ssss", $firstName, $lastName, $email, $passwordHash);
             
             if ($insert_stmt->execute()) {
+                $newUserId = $conn->insert_id;
+
+                // Handle profile picture upload if provided
+                if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['profile_picture'];
+                    $uploadDir = __DIR__ . '/uploads/profile_pictures/';
+
+                    $validUpload = true;
+
+                    // Validate file size (max 2MB)
+                    if ($file['size'] > 2 * 1024 * 1024) {
+                        $validUpload = false;
+                    }
+
+                    // Validate MIME type
+                    if ($validUpload) {
+                        $finfo = new finfo(FILEINFO_MIME_TYPE);
+                        $mimeType = $finfo->file($file['tmp_name']);
+                        if (!in_array($mimeType, ['image/jpeg', 'image/png'])) {
+                            $validUpload = false;
+                        }
+                    }
+
+                    // Validate file extension
+                    if ($validUpload) {
+                        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                        if (!in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                            $validUpload = false;
+                        }
+                    }
+
+                    if ($validUpload) {
+                        $newFilename = 'user_' . $newUserId . '_' . time() . '.' . $ext;
+                        $destination = $uploadDir . $newFilename;
+
+                        if (move_uploaded_file($file['tmp_name'], $destination)) {
+                            $picStmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE user_id = ?");
+                            $picStmt->bind_param("si", $newFilename, $newUserId);
+                            $picStmt->execute();
+                            $picStmt->close();
+                        }
+                    }
+                }
+
                 $register_success = "Account created successfully! You can now sign in with your credentials.";
                 // Clear form data after successful registration
                 $_POST = array();
@@ -204,22 +248,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         </form>
 
         <!-- Register Form -->
-        <form id="registerForm" method="post" action="" style="display:none;">
+        <form id="registerForm" method="post" action="" enctype="multipart/form-data" style="display:none;">
             <div class="name-row">
                 <div>
                     <label for="firstName">First Name</label>
-                    <input type="text" id="firstName" name="firstName" placeholder="John" 
+                    <input type="text" id="firstName" name="firstName" placeholder="John"
                            value="<?php echo isset($_POST['firstName']) && empty($register_success) ? htmlspecialchars($_POST['firstName']) : ''; ?>" required>
                 </div>
                 <div>
                     <label for="lastName">Last Name</label>
-                    <input type="text" id="lastName" name="lastName" placeholder="Doe" 
+                    <input type="text" id="lastName" name="lastName" placeholder="Doe"
                            value="<?php echo isset($_POST['lastName']) && empty($register_success) ? htmlspecialchars($_POST['lastName']) : ''; ?>" required>
                 </div>
             </div>
 
             <label for="regEmail">Email</label>
-            <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com" 
+            <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com"
                    value="<?php echo isset($_POST['regEmail']) && empty($register_success) ? htmlspecialchars($_POST['regEmail']) : ''; ?>" required>
 
             <label for="regPassword">Password <small>(minimum 6 characters)</small></label>
@@ -233,6 +277,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
                 <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
                 <i onclick="togglePassword('confirmPassword')" class="fa fa-eye"></i>
             </div>
+
+            <label for="regProfilePicture">Profile Picture <small>(optional)</small></label>
+            <input type="file" id="regProfilePicture" name="profile_picture" accept="image/jpeg,image/png">
+            <small style="color: #666; display: block; margin: 4px 0 10px;">Max 2MB. JPG, JPEG, or PNG only.</small>
 
             <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 14px; color: #666;">
                 <i class="fa fa-info-circle"></i> Your account will be created as a Customer account
