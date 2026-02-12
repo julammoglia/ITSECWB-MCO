@@ -1,14 +1,15 @@
 <?php
 session_start();
+
+// Check if user is logged in BEFORE including header
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header('Location: Login.php');
+    exit;
+}
+
 include ('includes/header.php');
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
 
 // DB connection
 include('includes/db.php');
@@ -334,7 +335,12 @@ function toggleFavorite(productCode) {
             const action = data.action === 'added' ? 'Added to' : 'Removed from';
             console.log(`${action} favorites: Product ${productCode}`);
         } else {
-            console.error('Error toggling favorite:', data.error);
+            // Show alert if user is not logged in
+            if (data.error === 'User not logged in') {
+                alert('User not logged in');
+            } else {
+                console.error('Error toggling favorite:', data.error);
+            }
         }
     })
     .catch(error => {

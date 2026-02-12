@@ -524,7 +524,12 @@ function toggleFavorite(productCode) {
             const action = data.action === 'added' ? 'Added to' : 'Removed from';
             console.log(`${action} favorites: Product ${productCode}`);
         } else {
-            console.error('Error toggling favorite:', data.error);
+            // Show alert if user is not logged in
+            if (data.error === 'User not logged in') {
+                alert('User not logged in');
+            } else {
+                console.error('Error toggling favorite:', data.error);
+            }
         }
     })
     .catch(error => {
