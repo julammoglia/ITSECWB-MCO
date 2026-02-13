@@ -380,7 +380,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         <!-- Login Form -->
         <form id="loginForm" method="post" action="" class="active">
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="Enter your email" inputmode="email" autocomplete="email" pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$" title="Enter a valid email address (must contain @ and a domain)" required>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required>
 
             <label for="password">Password</label>
             <div class="password-container">
@@ -417,7 +417,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             </div>
 
             <label for="regEmail">Email</label>
-            <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com" inputmode="email" autocomplete="email" pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$" title="Enter a valid email address (must contain @ and a domain)"
+            <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com"
                    value="<?php echo isset($_POST['regEmail']) && empty($register_success) ? htmlspecialchars($_POST['regEmail']) : ''; ?>" required>
 
             <label for="regPassword">Password <small>(min 12 chars, 3 of: upper/lower/digit/special, no spaces)</small></label>
@@ -456,7 +456,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         <!-- Forgot Password Form -->
         <form id="forgotPasswordForm" method="post" action="" style="display:none;">
             <label for="forgotEmail">Email</label>
-            <input type="email" id="forgotEmail" name="email" placeholder="Enter your email" inputmode="email" autocomplete="email" pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$" title="Enter a valid email address (must contain @ and a domain)" required>
+            <input type="email" id="forgotEmail" name="email" placeholder="Enter your email" required>
 
             <label for="oldPassword">Old Password</label>
             <input type="password" id="oldPassword" name="oldPassword" placeholder="Enter old password" required>
