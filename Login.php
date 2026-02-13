@@ -189,10 +189,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             $firstName = trim($_POST['firstName']);
             $lastName = trim($_POST['lastName']);
             $email = trim($_POST['regEmail']);
+            $phoneRaw = isset($_POST['regPhone']) ? trim($_POST['regPhone']) : '';
             $password = $_POST['regPassword'];
             $confirmPassword = $_POST['confirmPassword'];
 
-            if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
+            // Normalize phone: strip spaces, hyphens, parentheses, dots
+            $phoneNormalized = preg_replace('/[\s\-().]/', '', $phoneRaw);
+            // Convert 00 prefix to +
+            if (strpos($phoneNormalized, '00') === 0) { $phoneNormalized = '+' . substr($phoneNormalized, 2); }
+            // If PH local like 09XXXXXXXXX convert to +63XXXXXXXXX
+            $digitsOnly = preg_replace('/\D/', '', $phoneNormalized);
+            if (preg_match('/^09\d{9}$/', $digitsOnly)) {
+                $phoneNormalized = '+63' . substr($digitsOnly, 1);
+            }
+            // Ensure canonical + followed by 8-15 digits
+            if ($phoneNormalized && preg_match('/^\+?\d{8,15}$/', $phoneNormalized) === 1 && $phoneNormalized[0] !== '+') {
+                $phoneNormalized = '+' . ltrim($phoneNormalized, '+');
+            }
+
+            if (empty($firstName) || empty($lastName) || empty($email) || empty($phoneRaw) || empty($password) || empty($confirmPassword)) {
                 $register_error = "All fields are required.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
             } elseif ($password !== $confirmPassword) {
@@ -200,6 +215,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
                 $_SESSION['register_attempts'] = $register_attempts + 1;
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $register_error = "Please enter a valid email address.";
+                $_SESSION['register_attempts'] = $register_attempts + 1;
+            } elseif (empty($phoneNormalized) || preg_match('/^\+\d{8,15}$/', $phoneNormalized) !== 1) {
+                $register_error = "Enter a valid phone number. Use +<countrycode><number> (8–15 digits) or PH 09XXXXXXXXX.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
             } else {
                 $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
@@ -212,8 +230,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
                     $_SESSION['register_attempts'] = $register_attempts + 1;
                 } else {
                     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
-                    $insert_stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, 'Customer')");
-                    $insert_stmt->bind_param("ssss", $firstName, $lastName, $email, $passwordHash);
+                    $insert_stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, phone, password, user_role) VALUES (?, ?, ?, ?, ?, 'Customer')");
+                    $insert_stmt->bind_param("sssss", $firstName, $lastName, $email, $phoneNormalized, $passwordHash);
                     
                     if ($insert_stmt->execute()) {
                         $newUserId = $conn->insert_id;
@@ -412,6 +430,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             <label for="regEmail">Email</label>
             <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com"
                    value="<?php echo isset($_POST['regEmail']) && empty($register_success) ? htmlspecialchars($_POST['regEmail']) : ''; ?>" required>
+
+            <label for="regPhone">Phone Number (PH)</label>
+            <input type="tel" id="regPhone" name="regPhone" placeholder="09XXXXXXXXX" pattern="^09\d{9}$" maxlength="11" value="<?php echo isset($_POST['regPhone']) && empty($register_success) ? htmlspecialchars($_POST['regPhone']) : ''; ?>" required>
+            <small style="display:block; color:#6b7280; margin-top:6px;">PH mobile only: enter 11 digits starting with 09 (e.g., 09602764756).</small>
 
             <label for="regPassword">Password</label>
             <div class="password-container">
