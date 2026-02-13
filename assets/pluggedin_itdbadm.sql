@@ -485,6 +485,7 @@ CREATE TABLE `users` (
   `first_name` varchar(45) DEFAULT NULL,
   `last_name` varchar(45) DEFAULT NULL,
   `email` varchar(45) DEFAULT NULL,
+  `phone` varchar(45) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
   `profile_picture` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
@@ -493,13 +494,13 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`user_id`, `user_role`, `first_name`, `last_name`, `email`, `password`, `profile_picture`) VALUES
-(1, 'Customer', 'Alyssa', 'Mansueto', 'alyssa_mansueto@dlsu.edu.ph', 'alyssa', NULL),
-(2, 'Customer', 'Max', 'Balbastro', 'maxbalbastro@gmail.com', 'ilovejuls', NULL),
-(3, 'Admin', 'Brian', 'Lopez', 'brian_lopez@dlsu.edu.ph', 'brian', NULL),
-(4, 'Staff', 'Carla', 'Reyes', 'carla_reyes@dlsu.edu.ph', 'carla', NULL),
-(10, 'Customer', 'juls', 'Lammoglia', 'julstest@gmail.com', 'julianna', NULL),
-(11, 'Customer', 'juls', 'test', 'test@gmail.com', 'julianna', NULL);
+INSERT INTO `users` (`user_id`, `user_role`, `first_name`, `last_name`, `email`, `phone`, `password`, `profile_picture`) VALUES
+(1, 'Customer', 'Alyssa', 'Mansueto', 'alyssa_mansueto@dlsu.edu.ph', NULL, 'alyssa', NULL),
+(2, 'Customer', 'Max', 'Balbastro', 'maxbalbastro@gmail.com', NULL, 'ilovejuls', NULL),
+(3, 'Admin', 'Brian', 'Lopez', 'brian_lopez@dlsu.edu.ph', NULL, 'brian', NULL),
+(4, 'Staff', 'Carla', 'Reyes', 'carla_reyes@dlsu.edu.ph', NULL, 'carla', NULL),
+(10, 'Customer', 'juls', 'Lammoglia', 'julstest@gmail.com', NULL, 'julianna', NULL),
+(11, 'Customer', 'juls', 'test', 'test@gmail.com', NULL, 'julianna', NULL);
 
 --
 -- Triggers `users`
