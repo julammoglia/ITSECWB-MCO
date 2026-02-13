@@ -391,10 +391,10 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         </div>
 
         <div class="form-group">
-          <label for="new_password">New Password</label>
+          <label for="new_password">New Password <small style="font-weight:400; color:#9ca3af;">(min 12 chars, 3 of: upper/lower/digit/special, no spaces)</small></label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-key"></i></div>
-            <input type="password" id="new_password" name="new_password" placeholder="Enter your new password" minlength="8" required>
+            <input type="password" id="new_password" name="new_password" placeholder="Enter your new password" minlength="12" required>
             <button type="button" class="toggle-password" onclick="togglePassword('new_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
           </div>
         </div>
@@ -403,7 +403,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           <label for="confirm_password">Retype New Password</label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-key"></i></div>
-            <input type="password" id="confirm_password" name="confirm_password" placeholder="Retype your new password" minlength="8" required>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Retype your new password" minlength="12" required>
             <button type="button" class="toggle-password" onclick="togglePassword('confirm_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
           </div>
           <small id="passwordMismatch" style="display:none; color:#ef4444; margin-top:0.25rem;">New password and retype do not match.</small>

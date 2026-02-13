@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+require_once 'includes/password_policy.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     $userId = $_SESSION['user_id'];
@@ -15,7 +16,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
         $confirm = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
 
         // Basic validation
-        if ($new !== $confirm || strlen($new) < 6) {
+        if ($new !== $confirm) {
+            header("Location: User.php?pwd=invalid");
+            exit();
+        }
+        // Enforce centralized password policy
+        $policy = validate_password_policy($new);
+        if (!$policy['valid']) {
             header("Location: User.php?pwd=invalid");
             exit();
         }
