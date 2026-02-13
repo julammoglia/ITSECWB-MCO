@@ -1,72 +1,69 @@
-# ITDBADM-MP
-PluggedIn - Online Electronics and Accessories Store
-Description
+# Milestone 1: ITSECWB-MCO (PluggedIn) 
 
 PluggedIn is an online electronics and accessories store that specializes in high-quality, budget-friendly digital products such as headphones, earphones, keyboards, mics, monitors, speakers, and mice. It is designed to provide a seamless shopping experience, offering multiple currencies for international users (PHP, USD, KRW). The platform supports real-time inventory tracking, transaction logging, and role-based user access, with features for both customers and admins.
 
-- ------------------------------------------------------------------------------------------------------
-Technologies Used:
+Note: This project builds upon an older ITDBADM project that we were permitted to reuse. We refactored and enhanced it to meet the current course requirements (e.g., secure password hashing, generic auth errors, role-based access, and other security-oriented improvements) as instructed by the professor.
 
+Technologies Used:
 PHP: Server-side scripting to handle business logic and user interactions.
 HTML: For structuring the web pages.
 JavaScript: Client-side functionality, such as interactivity and form handling.
 SQL: For database management (MySQL via phpMyAdmin)
 MySQL: Database for managing users, products, transactions, and more.
-- ------------------------------------------------------------------------------------------------------
 
-Setup Instructions:
-1. Install XAMPP/WAMP (If not installed already)
+## Prerequisites
+- Install XAMPP
+  - Launch the app and start Apache and MySQL
+  - If your MySQL runs on another port (e.g., 3306), you must configure MySQL on the XAMPP interface to port 3307. 
 
-Launch XAMPP/WAMP and start Apache and MySQL services.
+## Database Setup
+1) Create database
+2) Import pluggedin_itdbadm.sql
+3) Verify files
 
-- ------------------------------------------------------------------------------------------------------
-2. Set up the Database in phpMyAdmin
+## Application Configuration
+- DB connection is set in includes/db.php:
+  - Host: 127.0.0.1
+  - User: root
+  - Password: "" (empty by default on XAMPP)
+  - DB name: pluggedin_itdbadm
+  - Port: 3307
 
-Access phpMyAdmin:
+If your MySQL runs on a different port (e.g., 3306), change the last parameter accordingly:
+```php
+$conn = new mysqli('127.0.0.1', 'root', '', 'pluggedin_itdbadm', 3306);
+```
 
-Open your browser and navigate to http://localhost/phpmyadmin.
+## Running Locally (XAMPP)
+1) Place the project folder at:
+- C:xampp/htdocs/ITSECWB-MCO
 
-Create a New Database:
-- In phpMyAdmin, click on the "Databases" tab.
-- Create a new database called pluggedin_itdbadm (you can choose a different name if needed).
-- Click "Create".
+2) Start XAMPP services
+- Start Apache and MySQL 
 
-Import the SQL File:
-- After the database is created, go to the Import tab in phpMyAdmin.
-- Choose the pluggedin_itdbadm.sql file (provided in the project).
-- Click Go to import the database.
+3) Open in browser
+- Public catalog: http://localhost/ITSECWB-MCO/Index.php
+- Authentication: http://localhost/ITSECWB-MCO/Login.php
+- User dashboard: http://localhost/ITSECWB-MCO/User.php (requires login)
+- Admin dashboard: http://localhost/ITSECWB-MCO/Admin.php (requires Admin role)
 
-- ------------------------------------------------------------------------------------------------------
+## Authentication & Passwords
+- Registration, login verification, and password reset use password_hash/password_verify with bcrypt.
+- Admin-created staff/admin users (Admin.php) now use password_hash (bcrypt) to prevent plaintext storage.
+- Login failure message is generic ("Invalid email and/or password") to avoid leaking which field was incorrect.
 
-3. Add the Project Files
-Copy the project files into the htdocs folder (for XAMPP) or www folder (for WAMP).
+## Troubleshooting
+- Session keeps redirecting to Login:
+  - Clear browser cookies; ensure PHP sessions are enabled and writable.
 
-For example, if you're using XAMPP, your files should be placed in C:\xampp\htdocs\PluggedIn.
+- MySQL port mismatch:
+  - Update includes/db.php port to match your MySQL port (e.g., 3306).
 
-- ------------------------------------------------------------------------------------------------------
+## License
+- This project was developed solely for academic requirements. 
 
-4. Configure Stored Procedures and Triggers
-The pluggedin_itdbadm.sql file contains the stored procedures and triggers that are required for the application. After importing the database, these will be automatically added to the MySQL server. Here’s a brief overview of what they do:
-
-Stored Procedures: These are used for managing business logic, such as inserting and updating transactions or managing user roles and data.
-
-Triggers: These will ensure that certain actions (such as updates or deletes) trigger automatically in the system (for example, updating inventory levels or logging transactions).
-
-Make sure these are created successfully by checking the Procedures and Triggers tabs in phpMyAdmin.
-
-- ------------------------------------------------------------------------------------------------------
-
-5. Access the Project in Your Browser
-Navigate to the project directory in your browser by typing the following URL:
-
-http://localhost/PluggedIn
-
-This will load the home page of the store where you can start interacting with the platform.
-
-- ------------------------------------------------------------------------------------------------------
-
-Team Member	Role
-Lianne Maxene Balbastro	FrontEnd DB Admin
-Julianna Charlize Lammoglia	FrontEnd BackEnd
-Maria Alyssa Mansueto	DB Admin BackEnd
-Edriel Santamaria	DB Admin BackEnd
+Team Members:
+Nicole Ashley L. Corpuz
+Princess Loraine R. Escobar
+Julianna Charlize Y. Lammoglia
+Tristan Neo M. Mercado
