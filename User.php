@@ -490,11 +490,9 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
             </div>
 
             <div class="action-group">
-              <button class="logout-btn" onclick="return confirmLogout()" style="background: #ffffff; color: #ef4444; border: 1px solid #fecaca;">
-                <a href="?logout=1" style="text-decoration: none; color: inherit;">
-                  <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
-              </button>
+              <a href="?logout=1" class="logout-btn" style="background: #ffffff; color: #ef4444; border: 1px solid #fecaca; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;" onclick="return confirm('Are you sure you want to logout?');">
+                <i class="fas fa-sign-out-alt"></i> Logout
+              </a>
             </div>
           </div>
         </div>
