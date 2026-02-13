@@ -3,7 +3,6 @@ session_start();
 include "includes/EnvLoader.php";
 include "includes/db.php";
 include "includes/rate_limit.php";
-include "includes/password_policy.php";
 
 // Load Cloudflare Turnstile Configuration from environment
 $turnstile_secret_key = EnvLoader::get('TURNSTILE_SECRET_KEY');
@@ -196,9 +195,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             if (empty($firstName) || empty($lastName) || empty($email) || empty($password) || empty($confirmPassword)) {
                 $register_error = "All fields are required.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
-            } elseif (($policy = validate_password_policy($password)) && !$policy['valid']) {
-                $register_error = implode(" ", $policy['errors']);
-                $_SESSION['register_attempts'] = $register_attempts + 1;
             } elseif ($password !== $confirmPassword) {
                 $register_error = "Passwords do not match.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
@@ -301,9 +297,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
 
             if (empty($email) || empty($old_password) || empty($new_password)) {
                 $forgot_password_error = "All fields are required.";
-                $_SESSION['reset_attempts'] = $reset_attempts + 1;
-            } elseif (($policy = validate_password_policy($new_password)) && !$policy['valid']) {
-                $forgot_password_error = implode(" ", $policy['errors']);
                 $_SESSION['reset_attempts'] = $reset_attempts + 1;
             } else {
                 $stmt = $conn->prepare("SELECT user_id, password FROM users WHERE email = ?");
@@ -420,9 +413,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com"
                    value="<?php echo isset($_POST['regEmail']) && empty($register_success) ? htmlspecialchars($_POST['regEmail']) : ''; ?>" required>
 
-            <label for="regPassword">Password <small>(min 12 chars, 3 of: upper/lower/digit/special, no spaces)</small></label>
+            <label for="regPassword">Password</label>
             <div class="password-container">
-                <input type="password" id="regPassword" name="regPassword" placeholder="Create a password" minlength="12" required>
+                <input type="password" id="regPassword" name="regPassword" placeholder="Create a password" required>
                 <i onclick="togglePassword('regPassword')" class="fa fa-eye"></i>
             </div>
 
@@ -461,8 +454,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             <label for="oldPassword">Old Password</label>
             <input type="password" id="oldPassword" name="oldPassword" placeholder="Enter old password" required>
 
-            <label for="newPassword">New Password <small>(min 12 chars, 3 of: upper/lower/digit/special, no spaces)</small></label>
-            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" minlength="12" required>
+            <label for="newPassword">New Password</label>
+            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" required>
 
             <?php if ($show_reset_captcha && $turnstile_site_key): ?>
             <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstile_site_key); ?>" data-theme="light"></div>
