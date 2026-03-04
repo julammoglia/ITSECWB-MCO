@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+require_once 'includes/password_policy.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -80,14 +81,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               break;
 
             case 'add_staff':
-                // Add staff/admin with secure password hashing
-                $first = $_POST['first_name'];
-                $last = $_POST['last_name'];
-                $email = $_POST['email'];
-                $rawPassword = $_POST['password'];
-                $role = $_POST['user_role'];
+                $first = trim($_POST['first_name'] ?? '');
+                $last = trim($_POST['last_name'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+                $rawPassword = $_POST['password'] ?? '';
+                $role = $_POST['user_role'] ?? '';
 
-                // Hash the password using bcrypt; unique salt embedded
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $error = "Invalid email address.";
+                    break;
+                }
+
+                if (!in_array($role, ['Staff', 'Admin'])) {
+                    $error = "Invalid role selected.";
+                    break;
+                }
+
+                $policyResult = validate_password_policy($rawPassword);
+                if (!$policyResult['valid']) {
+                    $error = "Password does not meet requirements: " . implode(' ', $policyResult['errors']);
+                    break;
+                }
+
                 $hashedPassword = password_hash($rawPassword, PASSWORD_BCRYPT);
 
                 $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, ?)");
@@ -392,7 +407,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
       <input name="first_name" placeholder="First Name" required>
       <input name="last_name" placeholder="Last Name" required>
       <input name="email" type="email" placeholder="Email" required>
-      <input name="password" type="password" placeholder="Password" required minlength="6">
+      <input name="password" type="password" placeholder="Password (min 12 chars)" required minlength="12" title="At least 12 characters with 3 of 4: uppercase, lowercase, numbers, special characters. No spaces.">
       <select name="user_role">
         <option value="Staff">Staff</option>
         <option value="Admin">Admin</option>

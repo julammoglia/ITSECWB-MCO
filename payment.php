@@ -147,8 +147,8 @@ if (!isset($_SESSION['user_id'])) {
                                    id="billing-address"
                                    required
                                    maxlength="120"
-                                   pattern="^[A-Za-zÀ-ÿ\s\-\'.]+$"
-                                   title="Only letters, spaces, hyphen (-), apostrophe ('), and dot (.) are allowed.">
+                                   pattern="^[A-Za-zÀ-ÿ0-9\s\-'.#,]+$"
+                                   title="Letters, numbers, spaces, and - ' . # , are allowed.">
                             <div class="field-error" id="err-billing-address"></div>
                         </div>
                     </div>
@@ -283,8 +283,8 @@ if (!isset($_SESSION['user_id'])) {
                                id="address"
                                required
                                maxlength="120"
-                               pattern="^[A-Za-zÀ-ÿ\s\-\'.]+$"
-                               title="Only letters, spaces, hyphen (-), apostrophe ('), and dot (.) are allowed.">
+                               pattern="^[A-Za-zÀ-ÿ0-9\s\-'.#,]+$"
+                               title="Letters, numbers, spaces, and - ' . # , are allowed.">
                         <div class="field-error" id="err-address"></div>
                     </div>
 
@@ -463,7 +463,8 @@ if (!isset($_SESSION['user_id'])) {
         /* ============================
            ADDED: Validators
            ============================ */
-        const nameRegex = /^[A-Za-zÀ-ÿ\s\-'.]+$/;
+        const nameRegex    = /^[A-Za-zÀ-ÿ\s\-'.]+$/;
+        const addressRegex = /^[A-Za-zÀ-ÿ0-9\s\-'.#,]+$/;
         const cardRegex = /^\d{4}\s\d{4}\s\d{4}\s\d{4}$/;
         const cvvRegex  = /^\d{3}$/;
         const expRegex  = /^(0[1-9]|1[0-2])\/\d{2}$/;
@@ -498,6 +499,18 @@ if (!isset($_SESSION['user_id'])) {
 
             const formData = new FormData();
             formData.append('payment_method', activeMethod);
+
+            if (activeMethod === 'card' || activeMethod === 'ewallet') {
+                formData.append('first_name',  document.getElementById('first-name').value);
+                formData.append('last_name',   document.getElementById('last-name').value);
+                formData.append('address',     document.getElementById('address').value);
+                formData.append('city',        document.getElementById('city').value);
+                formData.append('postal_code', document.getElementById('postal-code').value);
+                formData.append('phone',       document.getElementById('phone').value);
+            }
+            if (activeMethod === 'ewallet') {
+                formData.append('ewallet_account', document.getElementById('ewallet-account').value);
+            }
 
             fetch('process_payment.php', {
                 method: 'POST',
@@ -544,7 +557,7 @@ if (!isset($_SESSION['user_id'])) {
                 else if (!nameRegex.test(lastName.value.trim())) { showError(lastName, document.getElementById('err-last-name'), 'Last name must contain letters only.'); ok = false; }
 
                 if (!address.value.trim()) { showError(address, document.getElementById('err-address'), 'Address is required.'); ok = false; }
-                else if (!nameRegex.test(address.value.trim())) { showError(address, document.getElementById('err-address'), 'Address must contain letters only.'); ok = false; }
+                else if (!addressRegex.test(address.value.trim())) { showError(address, document.getElementById('err-address'), 'Address contains invalid characters.'); ok = false; }
 
                 if (!city.value.trim()) { showError(city, document.getElementById('err-city'), 'City is required.'); ok = false; }
                 else if (!nameRegex.test(city.value.trim())) { showError(city, document.getElementById('err-city'), 'City must contain letters only.'); ok = false; }
@@ -582,7 +595,7 @@ if (!isset($_SESSION['user_id'])) {
                 else if (!cvvRegex.test(cvv.value.trim())) { showError(cvv, document.getElementById('err-cvv'), 'CVV must be exactly 3 digits.'); ok = false; }
 
                 if (!billing.value.trim()) { showError(billing, document.getElementById('err-billing-address'), 'Billing address is required.'); ok = false; }
-                else if (!nameRegex.test(billing.value.trim())) { showError(billing, document.getElementById('err-billing-address'), 'Billing address must contain letters only.'); ok = false; }
+                else if (!addressRegex.test(billing.value.trim())) { showError(billing, document.getElementById('err-billing-address'), 'Billing address contains invalid characters.'); ok = false; }
 
                 return ok;
             }
@@ -626,57 +639,6 @@ if (!isset($_SESSION['user_id'])) {
 
             return true;
         }
-
-        /* ============================
-           CHANGED: Input restrictions (live)
-           ============================ */
-
-        // Card number: digits only, 16 max, format 4x4
-        document.getElementById('card-number').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/g, '').substring(0, 16);
-            e.target.value = (value.match(/.{1,4}/g) || []).join(' ');
-        });
-
-        // Names + city + address + billing: letters only (with - ' . and spaces)
-        function enforceLettersOnly(el) {
-            if (!el) return;
-            el.addEventListener('input', function() {
-                el.value = el.value.replace(/[^A-Za-zÀ-ÿ\s\-'.]/g, '').replace(/\s+/g, ' ');
-            });
-        }
-        enforceLettersOnly(document.getElementById('cardholder-name'));
-        enforceLettersOnly(document.getElementById('first-name'));
-        enforceLettersOnly(document.getElementById('last-name'));
-        enforceLettersOnly(document.getElementById('city'));
-        enforceLettersOnly(document.getElementById('address'));
-        enforceLettersOnly(document.getElementById('billing-address'));
-
-        // Expiry: digits only -> MM/YY
-        document.getElementById('expiry-date').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '').substring(0, 4);
-            if (value.length >= 3) value = value.substring(0, 2) + '/' + value.substring(2);
-            e.target.value = value;
-        });
-
-        // CVV: digits only, 3 max
-        document.getElementById('cvv').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
-        });
-
-        // Postal: digits only, 4 max
-        document.getElementById('postal-code').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
-        });
-
-        // Shipping phone: digits only, 11 max
-        document.getElementById('phone').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 11);
-        });
-
-        // ADDED: E-wallet phone: digits only, 11 max (PH format)
-        document.getElementById('ewallet-account').addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 11);
-        });
 
         // Set minimum pickup date to tomorrow
         const tomorrow = new Date();

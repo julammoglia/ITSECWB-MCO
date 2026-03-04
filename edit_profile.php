@@ -65,9 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     }
 
     // Default: profile update flow
-    // Clean input
     $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
     $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;
+
+    $firstNameSubmitted = ($firstName !== '' && $firstName !== null);
+    $lastNameSubmitted  = ($lastName  !== '' && $lastName  !== null);
 
     // Get current values from database
     $stmt = $conn->prepare("SELECT first_name, last_name, profile_picture FROM users WHERE user_id = ?");
@@ -82,12 +84,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     $current = $result->fetch_assoc();
 
     // Keep current values if inputs are empty
-    if ($firstName === '' || $firstName === null) {
+    if (!$firstNameSubmitted) {
         $firstName = $current['first_name'];
     }
 
-    if ($lastName === '' || $lastName === null) {
+    if (!$lastNameSubmitted) {
         $lastName = $current['last_name'];
+    }
+
+    // Validate name format if new values were submitted
+    $name_regex = '/^[A-Za-zÀ-ÿ\s\-\'.]{1,50}$/u';
+    if ($firstNameSubmitted && !preg_match($name_regex, $firstName)) {
+        header("Location: User.php?error=invalid_name");
+        exit();
+    }
+    if ($lastNameSubmitted && !preg_match($name_regex, $lastName)) {
+        header("Location: User.php?error=invalid_name");
+        exit();
     }
 
     // Update name

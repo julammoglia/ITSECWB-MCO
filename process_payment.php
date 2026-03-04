@@ -6,8 +6,71 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die(json_encode(['success' => false, 'error' => 'Invalid request method']));
 }
 
-$user_id = $_SESSION['user_id'] ?? 1; 
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    die(json_encode(['success' => false, 'error' => 'Unauthorized.']));
+}
+
+$user_id = $_SESSION['user_id'];
 $payment_method = $_POST['payment_method'] ?? '';
+
+// Validate payment method
+$allowed_methods = ['card', 'ewallet', 'cash'];
+if (!in_array($payment_method, $allowed_methods, true)) {
+    http_response_code(400);
+    die(json_encode(['success' => false, 'error' => 'Invalid payment method.']));
+}
+
+// Validate shipping fields for card and ewallet payments
+if ($payment_method === 'card' || $payment_method === 'ewallet') {
+    $first_name  = $_POST['first_name']  ?? '';
+    $last_name   = $_POST['last_name']   ?? '';
+    $address     = $_POST['address']     ?? '';
+    $city        = $_POST['city']        ?? '';
+    $postal_code = $_POST['postal_code'] ?? '';
+    $phone       = $_POST['phone']       ?? '';
+
+    $name_regex    = '/^[A-Za-zÀ-ÿ\s\-\'.]{1,50}$/u';
+    $address_regex = '/^[A-Za-zÀ-ÿ0-9\s\-\'.#,]{1,120}$/u';
+    $city_regex    = '/^[A-Za-zÀ-ÿ\s\-\'.]{1,60}$/u';
+    $postal_regex  = '/^\d{4}$/';
+    $phone_regex   = '/^09\d{9}$/';
+
+    if (!preg_match($name_regex, $first_name)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid first name.']));
+    }
+    if (!preg_match($name_regex, $last_name)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid last name.']));
+    }
+    if (!preg_match($address_regex, $address)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid address.']));
+    }
+    if (!preg_match($city_regex, $city)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid city.']));
+    }
+    if (!preg_match($postal_regex, $postal_code)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid postal code. Must be 4 digits.']));
+    }
+    if (!preg_match($phone_regex, $phone)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid phone number. Must be 11 digits starting with 09.']));
+    }
+}
+
+// Validate ewallet account number
+if ($payment_method === 'ewallet') {
+    $ewallet_account = $_POST['ewallet_account'] ?? '';
+    if (!preg_match('/^09\d{9}$/', $ewallet_account)) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'error' => 'Invalid e-wallet phone number. Must be 11 digits starting with 09.']));
+    }
+}
+
 $currency_code = 3; // PHP currency
 
 try {

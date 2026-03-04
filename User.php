@@ -38,6 +38,12 @@ if (isset($_GET['error'])) {
         echo "<p class='error-msg'>Only customers can delete their account.</p>";
     } elseif ($_GET['error'] === 'notfound') {
         echo "<p class='error-msg'>User not found.</p>";
+    } elseif ($_GET['error'] === 'invalid_name') {
+        echo "<p class='error-msg'>Invalid name. Only letters, spaces, hyphens, apostrophes, and dots are allowed (max 50 characters).</p>";
+    } elseif ($_GET['error'] === 'filesize') {
+        echo "<p class='error-msg'>Profile picture must be under 2MB.</p>";
+    } elseif ($_GET['error'] === 'filetype') {
+        echo "<p class='error-msg'>Only JPG, JPEG, and PNG images are allowed.</p>";
     }
 }
 
@@ -311,7 +317,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           <label for="edit_first_name">First Name</label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-user"></i></div>
-            <input type="text" id="edit_first_name" name="first_name" value="<?= htmlspecialchars($userResult['first_name']) ?>" placeholder="Enter your first name">
+            <input type="text" id="edit_first_name" name="first_name" value="<?= htmlspecialchars($userResult['first_name']) ?>" placeholder="Enter your first name" maxlength="50" pattern="^[A-Za-zÀ-ÿ\s\-'.]{1,50}$" title="Only letters, spaces, hyphens, apostrophes, and dots allowed.">
           </div>
         </div>
 
@@ -319,7 +325,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           <label for="edit_last_name">Last Name</label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-user"></i></div>
-            <input type="text" id="edit_last_name" name="last_name" value="<?= htmlspecialchars($userResult['last_name']) ?>" placeholder="Enter your last name">
+            <input type="text" id="edit_last_name" name="last_name" value="<?= htmlspecialchars($userResult['last_name']) ?>" placeholder="Enter your last name" maxlength="50" pattern="^[A-Za-zÀ-ÿ\s\-'.]{1,50}$" title="Only letters, spaces, hyphens, apostrophes, and dots allowed.">
           </div>
         </div>
 
