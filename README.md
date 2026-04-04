@@ -21,6 +21,16 @@ MySQL: Database for managing users, products, transactions, and more.
 2) Import pluggedin_itdbadm.sql
 3) Verify files
 
+If you already have an older local database imported, run the one-time migration:
+```bash
+/Applications/XAMPP/xamppfiles/bin/php scripts/migrate_legacy_users.php
+```
+
+This migration safely:
+- adds the missing `phone` column to `users` if needed
+- adds a unique index on `users.email` if possible
+- converts legacy plaintext passwords in `users.password` to bcrypt hashes
+
 ## Application Configuration
 - DB connection is set in includes/db.php:
   - Host: 127.0.0.1

@@ -242,7 +242,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
                     $register_error = "An account with this email already exists.";
                     $_SESSION['register_attempts'] = $register_attempts + 1;
                 } else {
-                    $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+                    $passwordHash = security_hash_password($password);
                     $insert_stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, phone, password, user_role) VALUES (?, ?, ?, ?, ?, 'Customer')");
                     $insert_stmt->bind_param("sssss", $firstName, $lastName, $email, $phone, $passwordHash);
                     
@@ -353,7 +353,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
                     $stmt->fetch();
 
                     if (password_verify($old_password, $hashed_password)) {
-                        $newPasswordHash = password_hash($new_password, PASSWORD_BCRYPT);
+                        $newPasswordHash = security_hash_password($new_password);
                         $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
                         $update_stmt->bind_param("ss", $newPasswordHash, $email);
                         

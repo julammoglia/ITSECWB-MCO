@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Hash and update new password
-        $newHash = password_hash($new, PASSWORD_BCRYPT);
+        $newHash = security_hash_password($new);
         $up = $conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
         $up->bind_param("si", $newHash, $userId);
         if ($up->execute()) {

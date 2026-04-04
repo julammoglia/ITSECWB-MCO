@@ -495,12 +495,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `user_role`, `first_name`, `last_name`, `email`, `phone`, `password`, `profile_picture`) VALUES
-(1, 'Customer', 'Alyssa', 'Mansueto', 'alyssa_mansueto@dlsu.edu.ph', NULL, 'alyssa', NULL),
-(2, 'Customer', 'Max', 'Balbastro', 'maxbalbastro@gmail.com', NULL, 'ilovejuls', NULL),
-(3, 'Admin', 'Brian', 'Lopez', 'brian_lopez@dlsu.edu.ph', NULL, 'brian', NULL),
-(4, 'Staff', 'Carla', 'Reyes', 'carla_reyes@dlsu.edu.ph', NULL, 'carla', NULL),
-(10, 'Customer', 'juls', 'Lammoglia', 'julstest@gmail.com', NULL, 'julianna', NULL),
-(11, 'Customer', 'juls', 'test', 'test@gmail.com', NULL, 'julianna', NULL);
+(1, 'Customer', 'Customer', 'One', 'customer1@gmail.com', '09000000001', '$2y$12$F7AJKgV9z8HlZLX6CE32..TETn57eGZa90mbj2QKJcjyQqvlWFt1u', NULL),
+(2, 'Customer', 'Customer', 'Two', 'customer2@gmail.com', '09000000002', '$2y$12$Nt2J86yGNyWcOL6fjK2DE.GOBqq6zDIIM4LO2qmcGgrawPx.CO95K', NULL),
+(3, 'Admin', 'Admin', 'One', 'admin1@gmail.com', '09000000004', '$2y$12$6UoJfA5vzf2ILHfAmIeUIuy8L3YBcXSNGW2NRWOxfPht1wTMmy5Sm', NULL),
+(4, 'Staff', 'Staff', 'One', 'staff1@gmail.com', '09000000003', '$2y$12$SWtThigB7cfUeACS7RxwBOkzCqxKZpGLK7.ntgYT1fAMJANz3G1sq', NULL);
 
 --
 -- Triggers `users`
@@ -663,7 +661,8 @@ ALTER TABLE `rate_limits`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `user_id_UNIQUE` (`user_id`);
+  ADD UNIQUE KEY `user_id_UNIQUE` (`user_id`),
+  ADD UNIQUE KEY `users_email_unique` (`email`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -709,7 +708,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables

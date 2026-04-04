@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
                 }
 
-                $hashedPassword = password_hash($rawPassword, PASSWORD_BCRYPT);
+                $hashedPassword = security_hash_password($rawPassword);
 
                 $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, ?)");
                 $stmt->bind_param("sssss", 

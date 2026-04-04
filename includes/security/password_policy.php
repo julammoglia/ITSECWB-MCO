@@ -5,6 +5,17 @@
 // - Must include at least 3 of 4 categories: uppercase, lowercase, digit, special
 // - Must not contain whitespace
 
+if (!defined('SECURITY_PASSWORD_HASH_COST')) {
+    define('SECURITY_PASSWORD_HASH_COST', 12);
+}
+
+if (!function_exists('security_hash_password')) {
+    function security_hash_password(string $password): string
+    {
+        return password_hash($password, PASSWORD_BCRYPT, ['cost' => SECURITY_PASSWORD_HASH_COST]);
+    }
+}
+
 if (!function_exists('validate_password_policy')) {
     /**
      * Validate a password against the application's policy.
