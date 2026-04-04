@@ -1,23 +1,12 @@
 <?php
-session_start(); // Start the session
-
-// Handle logout (before any output, including HTML)
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header("Location: index.php"); // Redirect to home page
-    exit();
-}
-
-// Make sure user is logged in (before any output)
-if (!isset($_SESSION['user_id'])) {
-    header("Location: Login.php"); 
-    exit();
-}
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
+security_handle_logout('index.php');
 
 require_once 'includes/db.php'; 
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
-$userId = $_SESSION['user_id'];
+$userId = security_require_login('Login.php');
 
 // Fetch user profile
 $stmt = $conn->prepare("SELECT user_id, user_role, first_name, last_name, email, password, profile_picture FROM users WHERE user_id = ?");

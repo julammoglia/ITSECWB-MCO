@@ -1,12 +1,10 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
 
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header("Location: index.php");
-    exit();
-}
+security_handle_logout('index.php');
+$userId = security_require_login('Login.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $productCode = $_POST['product_code'];

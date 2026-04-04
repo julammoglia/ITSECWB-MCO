@@ -1,19 +1,15 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
 
 if (isset($_SESSION['user_id'])) {
-    $userId = $_SESSION['user_id'];
+    $userId = security_require_login('Login.php');
 
     // Fetch the user's role
-    $stmt = $conn->prepare("SELECT user_role FROM users WHERE user_id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $role = security_get_user_role($conn, $userId);
 
-    if ($result && $result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        $role = $user['user_role'];
+    if ($role !== null) {
 
         // Allow deletion only if role is 'customer'
         if (strtolower(trim($role)) === 'customer') {

@@ -1,30 +1,11 @@
 <?php 
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 include 'includes/db.php';
 
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header("Location: index.php");
-    exit();
-}
+security_handle_logout('index.php');
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: Login.php");
-    exit();
-}
-$userId = $_SESSION['user_id'];
-
-// Verify user is staff
-$userCheck = $conn->prepare("SELECT user_role FROM users WHERE user_id = ?");
-$userCheck->bind_param("i", $userId);
-$userCheck->execute();
-$userResult = $userCheck->get_result();
-$user = $userResult->fetch_assoc();
-
-if ($user['user_role'] !== 'Staff') {
-    header("Location: Login.php");
-    exit();
-}
+$userId = security_require_role($conn, 'Staff');
 
 ?>
 

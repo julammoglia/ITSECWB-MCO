@@ -1,22 +1,12 @@
 <?php
-session_start(); 
-
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header("Location: index.php");
-    exit();
-}
-
-// Redirect if not logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: Login.php");
-    exit();
-}
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
+security_handle_logout('index.php');
+security_require_login('Login.php');
 
 require_once 'includes/db.php'; 
 
-$userId = $_SESSION['user_id'];
+$userId = (int) $_SESSION['user_id'];
 
 // Handle order assignment
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

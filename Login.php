@@ -1,9 +1,10 @@
 <?php
-session_start();
-include "includes/EnvLoader.php";
+require_once "includes/security/auth.php";
+security_ensure_session_started();
+include "includes/security/EnvLoader.php";
 include "includes/db.php";
-include "includes/rate_limit.php";
-require_once "includes/password_policy.php";
+include "includes/security/rate_limit.php";
+require_once "includes/security/password_policy.php";
 
 // Load Cloudflare Turnstile Configuration from environment
 $turnstile_secret_key = EnvLoader::get('TURNSTILE_SECRET_KEY');

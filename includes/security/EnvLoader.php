@@ -1,26 +1,22 @@
 <?php
 /**
- * Environment Configuration Loader
- * Loads environment variables from .env file
+ * Environment configuration loader.
  */
-
-class EnvLoader {
+class EnvLoader
+{
     private static $loaded = false;
 
     /**
-     * Load environment variables from .env file
+     * Load environment variables from a .env file.
      */
-    public static function load($path = null) {
+    public static function load($path = null)
+    {
         if (self::$loaded) {
             return;
         }
 
         if ($path === null) {
-            $path = dirname(dirname(__DIR__)) . '/ITSECWB-MCO/.env';
-        }
-
-        if (!file_exists($path)) {
-            $path = __DIR__ . '/../.env';
+            $path = dirname(__DIR__, 2) . '/.env';
         }
 
         if (!file_exists($path)) {
@@ -55,21 +51,21 @@ class EnvLoader {
     }
 
     /**
-     * Get environment variable
+     * Get an environment variable.
      */
-    public static function get($key, $default = null) {
+    public static function get($key, $default = null)
+    {
         $value = $_ENV[$key] ?? getenv($key);
         return $value !== false ? $value : $default;
     }
 
     /**
-     * Check if environment variable exists
+     * Check if an environment variable exists.
      */
-    public static function has($key) {
+    public static function has($key)
+    {
         return isset($_ENV[$key]) || getenv($key) !== false;
     }
 }
 
-// Auto-load .env file on include
 EnvLoader::load();
-?>

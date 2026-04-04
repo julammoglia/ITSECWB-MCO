@@ -1,21 +1,11 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 include ('includes/db.php');
 
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header("Location: index.php");
-    exit();
-}
+security_handle_logout('index.php');
 
-// Redirect if not logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: Login.php");
-    exit();
-}
-
-$userId = $_SESSION['user_id'];
+$userId = security_require_login('Login.php');
 
 // Handle status update
 if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_POST['order_id']) && isset($_POST['new_status'])) {

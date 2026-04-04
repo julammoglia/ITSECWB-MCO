@@ -1,7 +1,8 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
-require_once 'includes/password_policy.php';
+require_once 'includes/security/password_policy.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
     $userId = $_SESSION['user_id'];

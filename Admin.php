@@ -1,33 +1,13 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
-require_once 'includes/password_policy.php';
-
-// Check if admin is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: Login.php");
-    exit();
-}
-$userId = $_SESSION['user_id'];
-
-// Verify user is admin
-$userCheck = $conn->prepare("SELECT user_role FROM users WHERE user_id = ?");
-$userCheck->bind_param("i", $userId);
-$userCheck->execute();
-$userResult = $userCheck->get_result();
-$user = $userResult->fetch_assoc();
-
-if ($user['user_role'] !== 'Admin') {
-    header("Location: Login.php");
-    exit();
-}
+require_once 'includes/security/password_policy.php';
 
 // Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header("Location: Index.php"); 
-    exit();
-}
+security_handle_logout('Index.php');
+
+$userId = security_require_role($conn, 'Admin');
 
 // Form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
