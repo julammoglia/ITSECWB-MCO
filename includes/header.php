@@ -1,12 +1,10 @@
 <?php
-// Start session to check login status
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/security/auth.php';
+security_ensure_session_started();
 
-if (file_exists('includes/db.php')) {
-    include_once('includes/db.php');
-    include_once('currency_handler.php');
+if (file_exists(__DIR__ . '/db.php')) {
+    include_once(__DIR__ . '/db.php');
+    include_once(__DIR__ . '/../currency_handler.php');
     $header_currency = getCurrencyData($conn);
 } else {
     $header_currency = ['currency_name' => 'PHP', 'symbol' => '₱'];
@@ -18,6 +16,7 @@ if (file_exists('includes/db.php')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php echo security_csrf_meta_tag(); ?>
     <title>PluggedIn</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -89,6 +88,8 @@ if (file_exists('includes/db.php')) {
     <!-- Cart fetcher -->
     <!-- Cart fetcher -->
 <script>
+    window.APP_CSRF_TOKEN = <?php echo json_encode(security_get_csrf_token()); ?>;
+
     // Enhanced Cart JavaScript
     document.getElementById('cart-toggle').addEventListener('click', function () {
         document.getElementById('side-cart').classList.add('open');
@@ -165,6 +166,7 @@ function loadCart() {
         const formData = new FormData();
         formData.append('cart_id', cartId);
         formData.append('quantity', newQuantity);
+        formData.append('csrf_token', window.APP_CSRF_TOKEN);
         
         fetch('get_cart.php?action=update', {
             method: 'POST',
@@ -188,6 +190,7 @@ function loadCart() {
         
         const formData = new FormData();
         formData.append('cart_id', cartId);
+        formData.append('csrf_token', window.APP_CSRF_TOKEN);
         
         fetch('get_cart.php?action=delete', {
             method: 'POST',
@@ -236,6 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData();
         formData.append('action', 'change_currency');
         formData.append('currency_id', currencyId);
+        formData.append('csrf_token', window.APP_CSRF_TOKEN);
         
         fetch('currency_handler.php', {
             method: 'POST',

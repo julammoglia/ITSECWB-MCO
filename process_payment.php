@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $user_id = security_require_login_api('Unauthorized.');
+security_require_csrf_api();
 $payment_method = $_POST['payment_method'] ?? '';
 
 // Validate payment method

@@ -1,10 +1,8 @@
 <?php
 // currency_handler.php
+require_once 'includes/security/auth.php';
 include_once('includes/db.php');
-
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+security_ensure_session_started();
 
 // Set default currency to PHP if not set
 if (!isset($_SESSION['selected_currency'])) {
@@ -13,6 +11,9 @@ if (!isset($_SESSION['selected_currency'])) {
 
 // Handle AJAX currency change requests
 if (isset($_POST['action']) && $_POST['action'] === 'change_currency') {
+    header('Content-Type: application/json');
+    security_require_csrf_api();
+
     $currency_id = intval($_POST['currency_id']);
     if (in_array($currency_id, [1, 2, 3])) { // Only allow valid currency codes
         $_SESSION['selected_currency'] = $currency_id;

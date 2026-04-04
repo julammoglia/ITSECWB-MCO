@@ -8,6 +8,8 @@ $userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 
 // Handle order assignment
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    security_require_csrf('available_orders.php');
+
     $orderId = $_POST['order_id'];
     $action = $_POST['action'];
 
@@ -112,10 +114,13 @@ while ($order = $ordersResult->fetch_assoc()) {
                 <a href="Index.php" class="staff-btn staff-btn-primary">
                     Go to Customer View
                 </a>
-                <a href="?logout=true" class="staff-btn staff-btn-secondary" 
-                   onclick="return confirm('Are you sure you want to logout?');">
-                    Logout
-                </a>
+                <form method="POST" style="display: inline;">
+                    <?php echo security_csrf_input(); ?>
+                    <button type="submit" name="logout" value="1" class="staff-btn staff-btn-secondary"
+                            onclick="return confirm('Are you sure you want to logout?');">
+                        Logout
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -175,6 +180,7 @@ while ($order = $ordersResult->fetch_assoc()) {
                                     </button>
                                     
                                     <form method="POST" class="action-form" onsubmit="return confirmAssign('<?php echo $orderId; ?>')">
+                                        <?php echo security_csrf_input(); ?>
                                         <input type="hidden" name="order_id" value="<?php echo htmlspecialchars($orderId); ?>">
                                         <input type="hidden" name="action" value="assign">
                                         <button type="submit" class="assign-to-btn">Assign to Me</button>

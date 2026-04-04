@@ -24,6 +24,8 @@ if (isset($_GET['error'])) {
         echo "<p class='error-msg'>Only customers can delete their account.</p>";
     } elseif ($_GET['error'] === 'notfound') {
         echo "<p class='error-msg'>User not found.</p>";
+    } elseif ($_GET['error'] === 'csrf') {
+        echo "<p class='error-msg'>The request could not be verified. Please try again.</p>";
     } elseif ($_GET['error'] === 'invalid_name') {
         echo "<p class='error-msg'>Invalid name. Only letters, spaces, hyphens, apostrophes, and dots are allowed (max 50 characters).</p>";
     } elseif ($_GET['error'] === 'filesize') {
@@ -299,6 +301,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
 
     <div class="modal-body">
       <form action="edit_profile.php" method="post" enctype="multipart/form-data">
+        <?php echo security_csrf_input(); ?>
         <div class="form-group">
           <label for="edit_first_name">First Name</label>
           <div class="input-wrapper">
@@ -335,9 +338,10 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           <button type="submit" class="save-btn">
             <i class="fas fa-save"></i> Save Changes
           </button>
-          <a href="delete_account.php" onclick="return confirm('Are you sure you want to delete your account?')" class="delete-btn">
+          <button type="submit" class="delete-btn" formaction="delete_account.php" formmethod="post"
+                  onclick="return confirm('Are you sure you want to delete your account?')">
             <i class="fas fa-trash-alt"></i> Delete Account
-          </a>
+          </button>
         </div>
       </form>
     </div>
@@ -371,6 +375,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           </div>
       <?php endif; endif; ?>
       <form id="changePasswordForm" action="edit_profile.php" method="post">
+        <?php echo security_csrf_input(); ?>
         <input type="hidden" name="action" value="change_password">
 
         <div class="form-group">
@@ -481,9 +486,13 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
             </div>
 
             <div class="action-group">
-              <a href="?logout=1" class="logout-btn" style="background: #ffffff; color: #ef4444; border: 1px solid #fecaca; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;" onclick="return confirm('Are you sure you want to logout?');">
-                <i class="fas fa-sign-out-alt"></i> Logout
-              </a>
+              <form method="POST" style="display: inline;">
+                <?php echo security_csrf_input(); ?>
+                <button type="submit" name="logout" value="1" class="logout-btn" style="background: #ffffff; color: #ef4444; border: 1px solid #fecaca;"
+                        onclick="return confirm('Are you sure you want to logout?');">
+                  <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+              </form>
             </div>
           </div>
         </div>

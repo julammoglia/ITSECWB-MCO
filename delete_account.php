@@ -3,6 +3,12 @@ require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    security_redirect('User.php');
+}
+
+security_require_csrf('User.php', 'error', 'csrf');
+
 $userId = security_require_login('Login.php');
 
 $role = security_get_user_role($conn, $userId);

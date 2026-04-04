@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $user_id = security_require_login_api('User not logged in');
+security_require_csrf_api();
 $product_code = $_POST['product_code'] ?? null;
 
 if (!$product_code) {

@@ -298,6 +298,7 @@ function toggleFavorite(productCode) {
     // Send request to server
     const formData = new FormData();
     formData.append('product_code', productCode);
+    formData.append('csrf_token', window.APP_CSRF_TOKEN);
     
     fetch('toggle_favorite.php', {
         method: 'POST',
@@ -372,6 +373,7 @@ function addToCart(productCode, quantity, buttonElement) {
     const formData = new FormData();
     formData.append('product_code', productCode);
     formData.append('quantity', quantity);
+    formData.append('csrf_token', window.APP_CSRF_TOKEN);
     
     fetch('get_cart.php?action=add', {
         method: 'POST',

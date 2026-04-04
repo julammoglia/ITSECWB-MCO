@@ -25,10 +25,13 @@ $userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
                 <a href="Index.php" class="staff-btn staff-btn-primary">
                     Go to Customer View
                 </a>
-                <a href="?logout=true" class="staff-btn staff-btn-secondary" 
-                   onclick="return confirm('Are you sure you want to logout?');">
-                    Logout
-                </a>
+                <form method="POST" style="display: inline;">
+                    <?php echo security_csrf_input(); ?>
+                    <button type="submit" name="logout" value="1" class="staff-btn staff-btn-secondary"
+                            onclick="return confirm('Are you sure you want to logout?');">
+                        Logout
+                    </button>
+                </form>
             </div>
         </div>
 

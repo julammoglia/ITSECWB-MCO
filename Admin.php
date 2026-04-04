@@ -7,11 +7,23 @@ require_once 'includes/security/password_policy.php';
 // Handle logout
 security_handle_logout('Index.php');
 
-$userId = security_require_role($conn, 'Admin', 'Login.php', 'Index.php');
+$isOrderStatusRequest = $_SERVER['REQUEST_METHOD'] === 'POST'
+    && (($_POST['action'] ?? '') === 'update_order_status');
+
+$userId = $isOrderStatusRequest
+    ? security_require_role_api($conn, 'Admin')
+    : security_require_role($conn, 'Admin', 'Login.php', 'Index.php');
 
 // Form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
+        if ($_POST['action'] === 'update_order_status') {
+            header('Content-Type: application/json');
+            security_require_csrf_api();
+        } else {
+            security_require_csrf('Admin.php');
+        }
+
         switch ($_POST['action']) {
             case 'add_product':
                 // Use add_new_product stored procedure
@@ -225,9 +237,12 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
 <div class="container">
   <div class="user-info">
   <h2>Admin Dashboard</h2>
-    <button class="logout-btn" onclick="return confirmLogout()">
-      <a href="?logout=1"> Logout </a>
-    </button>
+    <form method="POST" style="display: inline;">
+      <?php echo security_csrf_input(); ?>
+      <button type="submit" name="logout" value="1" class="logout-btn" onclick="return confirmLogout()">
+        Logout
+      </button>
+    </form>
   </div>
 
   <div class="tabs">
@@ -249,6 +264,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <div class="content-box">
     <h3><i class="fas fa-plus"></i> Add New Product (Using Stored Procedure)</h3>
     <form method="POST" class="form-grid single-row">
+      <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="add_product">
       <input name="product_name" placeholder="Product Name" required>
       
@@ -296,6 +312,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
             <td><?= htmlspecialchars($p['description'] ?? '') ?></td>
             <td class="actions-cell">
               <form method="POST" id="delete-product-<?= $p['product_code'] ?>" style="display: none;">
+                <?php echo security_csrf_input(); ?>
                 <input type="hidden" name="action" value="delete_product">
                 <input type="hidden" name="product_id" value="<?= $p['product_code'] ?>">
               </form>
@@ -320,6 +337,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
   <div class="content-box">
   <h3><i class="fas fa-sync-alt"></i> Update Stock (Using Stored Procedure)</h3>
     <form method="POST" class="form-grid single-row">
+      <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="update_stock">
       <select name="product_code" required>
         <option value="">Select Product</option>
@@ -362,6 +380,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
             <td>
               <!-- Quick Restock Form -->
               <form method="POST" class="form-grid single-row">
+                <?php echo security_csrf_input(); ?>
                 <input type="hidden" name="action" value="update_stock">
                 <input type="hidden" name="product_code" value="<?= $ls['product_code'] ?>">
                 <input type="number" name="new_stock" value="100" min="1" style="width: 70px; margin-right: 5px;" required>
@@ -383,6 +402,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <div class="content-box">
     <h3><i class="fas fa-user-plus"></i> Add New Staff</h3>
     <form method="POST" class="form-grid single-row">
+      <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="add_staff">
       <input name="first_name" placeholder="First Name" required>
       <input name="last_name" placeholder="Last Name" required>
@@ -412,6 +432,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
             <td><?= $s['user_role'] ?></td>
             <td class="actions-cell">
               <form method="POST" id="delete-staff-<?= $s['user_id'] ?>" style="display: none;">
+                <?php echo security_csrf_input(); ?>
                 <input type="hidden" name="action" value="delete_staff">
                 <input type="hidden" name="user_id" value="<?= $s['user_id'] ?>">
               </form>
@@ -431,6 +452,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <div class="content-box">
     <h3><i class="fas fa-user-times"></i> Delete Customer Account</h3>
     <form method="POST" class="form-grid single-row">
+      <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="delete_customer">
       <select name="customer_id" required>
         <option value="">Select Customer to Delete</option>
@@ -505,6 +527,8 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
 
 
 <script>
+const csrfToken = <?php echo json_encode(security_get_csrf_token()); ?>;
+
 function deleteProduct(productCode, productName) {
   if (confirm(`Delete product: ${productName}? This will remove it from all carts, favorites, and order history.`)) {
     document.getElementById(`delete-product-${productCode}`).submit();
@@ -530,6 +554,7 @@ function updateOrderStatus(orderId, newStatus) {
     formData.append('action', 'update_order_status');
     formData.append('order_id', orderId);
     formData.append('new_status', newStatus);
+    formData.append('csrf_token', csrfToken);
     
     fetch(window.location.href, {
       method: 'POST',
@@ -573,6 +598,7 @@ function quickRestock(productCode, productName) {
     formData.append('action', 'update_stock');
     formData.append('product_code', productCode);
     formData.append('new_stock', parseInt(newStock));
+    formData.append('csrf_token', csrfToken);
     
     fetch(window.location.href, {
       method: 'POST',

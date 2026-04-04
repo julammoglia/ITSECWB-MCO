@@ -374,6 +374,8 @@ $userId = security_require_login('Login.php');
     </div>
 
     <script>
+        const csrfToken = <?php echo json_encode(security_get_csrf_token()); ?>;
+
         // Add currency data for JavaScript
         const currencyData = {
             currency_code: <?php echo $current_currency['currency_code']; ?>,
@@ -496,6 +498,7 @@ $userId = security_require_login('Login.php');
 
             const formData = new FormData();
             formData.append('payment_method', activeMethod);
+            formData.append('csrf_token', csrfToken);
 
             if (activeMethod === 'card' || activeMethod === 'ewallet') {
                 formData.append('first_name',  document.getElementById('first-name').value);

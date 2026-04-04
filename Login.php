@@ -18,6 +18,10 @@ $forgot_password_success = "";
 $register_error = "";
 $register_success = "";
 
+if (($_GET['session'] ?? '') === 'expired') {
+    $login_error = "Your session expired after 15 minutes of inactivity. Please sign in again.";
+}
+
 // Get client IP using the same function as rate_limit
 $client_ip = get_client_ip();
 
@@ -96,6 +100,10 @@ function verify_turnstile_token($token, $secret_key) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
     $email = security_normalize_email($_POST['email'] ?? '');
     $password = $_POST['password'];
+
+    if (!security_verify_csrf_token($_POST['csrf_token'] ?? null)) {
+        $login_error = "Your session token is invalid. Please refresh the page and try again.";
+    }
     
     // Check CAPTCHA if required
     if ($show_login_captcha && $turnstile_secret_key) {
@@ -134,6 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
                     $_SESSION['email'] = $email;
                     $_SESSION['logged_in'] = true;
                     $_SESSION['login_attempts'] = 0;
+                    security_initialize_authenticated_session();
 
                     $redirect_page = "";
                     $role_message = "";
@@ -173,6 +182,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
 
 // Handle registration form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
+    if (!security_verify_csrf_token($_POST['csrf_token'] ?? null)) {
+        $register_error = "Your session token is invalid. Please refresh the page and try again.";
+    }
+
     // Check CAPTCHA if required
     if ($show_register_captcha && $turnstile_secret_key) {
         if (empty($_POST['cf-turnstile-response'])) {
@@ -291,6 +304,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
 
 // Handle forgot password form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
+    if (!security_verify_csrf_token($_POST['csrf_token'] ?? null)) {
+        $forgot_password_error = "Your session token is invalid. Please refresh the page and try again.";
+    }
+
     // Check CAPTCHA if required
     if ($show_reset_captcha && $turnstile_secret_key) {
         if (empty($_POST['cf-turnstile-response'])) {
@@ -400,6 +417,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
     <div class="form-wrapper">
         <!-- Login Form -->
         <form id="loginForm" method="post" action="" class="active">
+            <?php echo security_csrf_input(); ?>
             <label for="email">Email</label>
             <input type="email" id="email" name="email" placeholder="Enter your email"
                    value="<?php echo isset($_POST['email']) && empty($login_error) === false ? htmlspecialchars($_POST['email']) : ''; ?>"
@@ -428,6 +446,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
 
         <!-- Register Form -->
         <form id="registerForm" method="post" action="" enctype="multipart/form-data" style="display:none;">
+            <?php echo security_csrf_input(); ?>
             <div class="name-row">
                 <div>
                     <label for="firstName">First Name</label>
@@ -496,6 +515,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
 
         <!-- Forgot Password Form -->
         <form id="forgotPasswordForm" method="post" action="" style="display:none;">
+            <?php echo security_csrf_input(); ?>
             <label for="forgotEmail">Email</label>
             <input type="email" id="forgotEmail" name="email" placeholder="Enter your email"
                    value="<?php echo isset($_POST['email']) && (empty($forgot_password_error) === false || empty($forgot_password_success) === false) ? htmlspecialchars($_POST['email']) : ''; ?>"

@@ -5,10 +5,18 @@ include ('includes/db.php');
 
 security_handle_logout('index.php');
 
-$userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
+$isAjaxAction = $_SERVER['REQUEST_METHOD'] === 'POST'
+    && in_array($_POST['action'] ?? '', ['update_status', 'complete_order'], true);
+
+$userId = $isAjaxAction
+    ? security_require_role_api($conn, 'Staff')
+    : security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 
 // Handle status update
 if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_POST['order_id']) && isset($_POST['new_status'])) {
+    header('Content-Type: application/json');
+    security_require_csrf_api();
+
     $order_id = intval($_POST['order_id']);
     $new_status = $_POST['new_status'];
     
@@ -31,6 +39,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_P
 
 // Handle order completion
 if (isset($_POST['action']) && $_POST['action'] === 'complete_order' && isset($_POST['order_id'])) {
+    header('Content-Type: application/json');
+    security_require_csrf_api();
+
     $order_id = intval($_POST['order_id']);
 
     $checkOrderQuery = "SELECT order_status FROM orders WHERE order_id = ?";
@@ -196,10 +207,13 @@ function getStatusDropdown($currentStatus, $orderId, $assignmentStatus) {
                 <a href="Index.php" class="staff-btn staff-btn-primary">
                     Go to Customer View
                 </a>
-                <a href="?logout=true" class="staff-btn staff-btn-secondary" 
-                   onclick="return confirm('Are you sure you want to logout?');">
-                    Logout
-                </a>
+                <form method="POST" style="display: inline;">
+                    <?php echo security_csrf_input(); ?>
+                    <button type="submit" name="logout" value="1" class="staff-btn staff-btn-secondary"
+                            onclick="return confirm('Are you sure you want to logout?');">
+                        Logout
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -323,6 +337,7 @@ function getStatusDropdown($currentStatus, $orderId, $assignmentStatus) {
     </div>
 
     <script>
+        const csrfToken = <?php echo json_encode(security_get_csrf_token()); ?>;
         const orderData = <?php echo json_encode(array_column(array_merge($activeOrders, $completedOrders), null, 'order_id')); ?>;
 
         function viewOrder(orderId) {
@@ -343,6 +358,7 @@ function getStatusDropdown($currentStatus, $orderId, $assignmentStatus) {
                 formData.append('action', 'update_status');
                 formData.append('order_id', orderId);
                 formData.append('new_status', newStatus);
+                formData.append('csrf_token', csrfToken);
 
                 // Send AJAX request
                 fetch(window.location.href, {
@@ -370,6 +386,7 @@ function getStatusDropdown($currentStatus, $orderId, $assignmentStatus) {
                 const formData = new FormData();
                 formData.append('action', 'complete_order');
                 formData.append('order_id', orderId);
+                formData.append('csrf_token', csrfToken);
 
                 // Send AJAX request
                 fetch(window.location.href, {

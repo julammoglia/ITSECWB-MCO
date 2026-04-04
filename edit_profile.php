@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/security/input_validation.php';
 require_once 'includes/security/password_policy.php';
 
 $userId = security_require_login('Login.php');
@@ -11,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    security_require_csrf('User.php', 'error', 'csrf');
 
     // Branch by action: profile update or password change
     $action = isset($_POST['action']) ? $_POST['action'] : 'update_profile';
@@ -62,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $up = $conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
         $up->bind_param("si", $newHash, $userId);
         if ($up->execute()) {
+            security_initialize_authenticated_session();
             header("Location: User.php?pwd=success");
             exit();
         } else {
@@ -99,12 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Validate name format if new values were submitted
-    $name_regex = '/^[A-Za-zÀ-ÿ\s\-\'.]{1,50}$/u';
-    if ($firstNameSubmitted && !preg_match($name_regex, $firstName)) {
+    if ($firstNameSubmitted && !security_is_valid_name($firstName)) {
         header("Location: User.php?error=invalid_name");
         exit();
     }
-    if ($lastNameSubmitted && !preg_match($name_regex, $lastName)) {
+    if ($lastNameSubmitted && !security_is_valid_name($lastName)) {
         header("Location: User.php?error=invalid_name");
         exit();
     }

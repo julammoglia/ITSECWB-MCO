@@ -16,12 +16,15 @@ switch($action) {
         getCartItems($conn, $user_id);
         break;
     case 'add':
+        security_require_csrf_api();
         addToCart($conn, $user_id);
         break;
     case 'update':
+        security_require_csrf_api();
         updateCart($conn, $user_id);
         break;
     case 'delete':
+        security_require_csrf_api();
         deleteFromCart($conn, $user_id);
         break;
     default:
