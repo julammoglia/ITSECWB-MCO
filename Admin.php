@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/security.php';
 require_once 'includes/security/password_policy.php';
 
 // Handle logout
@@ -26,14 +27,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         switch ($_POST['action']) {
             case 'add_product':
+                $productName = security_sanitize_limited_string($_POST['product_name'] ?? null, 255);
+                $stockQty = security_validate_positive_number($_POST['stock_qty'] ?? null, false);
+                $srpPhp = security_validate_positive_number($_POST['srp_php'] ?? null, true);
+
+                if ($productName === false || $stockQty === false || $srpPhp === false) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'add_product',
+                        'fields' => [
+                            'product_name' => $productName !== false,
+                            'stock_qty' => $stockQty !== false,
+                            'srp_php' => $srpPhp !== false,
+                        ],
+                        'user_id' => $userId,
+                    ]);
+                    security_redirect(security_add_query_param('Admin.php', 'error', 'invalid_input'));
+                }
+
                 // Use add_new_product stored procedure
                 $stmt = $conn->prepare("CALL add_new_product(?, ?, ?, ?, ?)");
                 $stmt->bind_param("sisid", 
-                    $_POST['product_name'], 
+                    $productName, 
                     $_POST['category_code'], 
                     $_POST['description'], 
-                    $_POST['stock_qty'], 
-                    $_POST['srp_php']
+                    $stockQty, 
+                    $srpPhp
                 );
                 if ($stmt->execute()) {
                     $success = "Product added successfully! Inventory trigger logged the new stock.";
@@ -56,9 +74,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
 
             case 'update_stock':
+              $productCode = security_validate_positive_number($_POST['product_code'] ?? null, false);
+              $newStock = security_validate_non_negative_integer($_POST['new_stock'] ?? null);
+
+              if ($productCode === false || $newStock === false) {
+                  log_event('VALIDATION_FAILURE', [
+                      'action' => 'update_stock',
+                      'fields' => [
+                          'product_code' => $productCode !== false,
+                          'new_stock' => $newStock !== false,
+                      ],
+                      'user_id' => $userId,
+                  ]);
+                  security_redirect(security_add_query_param('Admin.php', 'error', 'invalid_stock_input'));
+              }
+
               // Use update_product_stock stored procedure
               $stmt = $conn->prepare("CALL update_product_stock(?, ?)");
-              $stmt->bind_param("ii", $_POST['product_code'], $_POST['new_stock']);
+              $stmt->bind_param("ii", $productCode, $newStock);
               
               try {
                   if ($stmt->execute()) {
@@ -257,6 +290,12 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <?php if (isset($success)): ?>
       <div class="alert alert-success"><?= $success ?></div>
     <?php endif; ?>
+    <?php if (isset($_GET['error']) && $_GET['error'] === 'invalid_input'): ?>
+      <div class="alert alert-error">Unable to process the request. Please review the product input and try again.</div>
+    <?php endif; ?>
+    <?php if (isset($_GET['error']) && $_GET['error'] === 'invalid_stock_input'): ?>
+      <div class="alert alert-error">Unable to update stock. Please review the stock input and try again.</div>
+    <?php endif; ?>
     <?php if (isset($error)): ?>
       <div class="alert alert-error"><?= $error ?></div>
     <?php endif; ?>
@@ -266,7 +305,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <form method="POST" class="form-grid single-row">
       <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="add_product">
-      <input name="product_name" placeholder="Product Name" required>
+      <input name="product_name" placeholder="Product Name" maxlength="255" required>
       
       <select name="category_code" required>
         <option value="">Select Category</option>
@@ -278,8 +317,8 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
         <?php endwhile; ?>
       </select>
       
-      <input name="srp_php" type="number" step="0.01" placeholder="Price (PHP)" required>
-      <input name="stock_qty" type="number" placeholder="Stock Quantity" required>
+      <input name="srp_php" type="number" step="0.01" min="0.01" placeholder="Price (PHP)" inputmode="decimal" required>
+      <input name="stock_qty" type="number" min="1" step="1" placeholder="Stock Quantity" inputmode="numeric" required>
       <input name="description" placeholder="Product Description" maxlength="45"></input>
       <button type="submit" class="yellow-btn">Add Product</button>
     </form>
@@ -350,7 +389,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
         </option>
         <?php endwhile; ?>
       </select>
-      <input name="new_stock" type="number" placeholder="New Stock Quantity">
+      <input name="new_stock" type="number" min="0" step="1" inputmode="numeric" placeholder="New Stock Quantity" required>
       <button type="submit" class="yellow-btn">Update Stock</button>
     </form>
     </div>
@@ -630,6 +669,37 @@ function quickRestock(productCode, productName) {
 function confirmLogout() {
       return confirm('Are you sure you want to logout?');
 }
+
+document.querySelectorAll('input[name="srp_php"], input[name="stock_qty"]').forEach((input) => {
+  input.addEventListener('keydown', (event) => {
+    if (['e', 'E', '+', '-'].includes(event.key)) {
+      event.preventDefault();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    if (input.name === 'stock_qty') {
+      input.value = input.value.replace(/[^\d]/g, '');
+      return;
+    }
+
+    input.value = input.value
+      .replace(/[^0-9.]/g, '')
+      .replace(/(\..*)\./g, '$1');
+  });
+});
+
+document.querySelectorAll('input[name="new_stock"]').forEach((input) => {
+  input.addEventListener('keydown', (event) => {
+    if (['e', 'E', '+', '-', '.'].includes(event.key)) {
+      event.preventDefault();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/[^\d]/g, '');
+  });
+});
 </script>
 
 </body>
