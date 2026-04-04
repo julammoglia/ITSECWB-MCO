@@ -78,7 +78,7 @@ CREATE TABLE `cart` (
 --
 
 INSERT INTO `cart` (`cart_id`, `user_id`, `product_code`, `quantity`, `date_added`) VALUES
-(21, 10, 6, 1, '2025-07-22 14:17:34');
+(21, 2, 6, 1, '2025-07-22 14:17:34');
 
 -- --------------------------------------------------------
 
@@ -167,7 +167,7 @@ CREATE TABLE `customer_edit_log` (
 --
 
 INSERT INTO `customer_edit_log` (`log_id`, `user_id`, `old_first_name`, `new_first_name`, `old_last_name`, `new_last_name`, `edit_time`) VALUES
-(1, 10, 'juls', 'juls', 'test', 'Lammoglia', '2025-07-22 20:45:40');
+(1, 2, 'Customer', 'Customer', 'Temp', 'Two', '2025-07-22 20:45:40');
 
 -- --------------------------------------------------------
 
