@@ -1,19 +1,11 @@
 <?php
-session_start();
-
-// Check if user is logged in BEFORE including header
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    header('Location: Login.php');
-    exit;
-}
-
-include ('includes/header.php');
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
+require_once 'includes/db.php';
 include_once('currency_handler.php');
+$user_id = security_require_login('Login.php');
+include ('includes/header.php');
 $current_currency = getCurrencyData($conn);
-
-// DB connection
-include('includes/db.php');
-$user_id = $_SESSION['user_id'];
 
 // Fetch favorited products with more details
 $sql = "SELECT p.product_code, p.product_name, p.description, p.srp_php, p.stock_qty, c.category_name 

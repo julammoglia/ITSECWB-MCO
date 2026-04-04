@@ -4,7 +4,7 @@ security_ensure_session_started();
 require_once 'includes/db.php';
 
 security_handle_logout('index.php');
-$userId = security_require_login('Login.php');
+$userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $productCode = $_POST['product_code'];

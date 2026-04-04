@@ -5,7 +5,7 @@ include 'includes/db.php';
 
 security_handle_logout('index.php');
 
-$userId = security_require_role($conn, 'Staff');
+$userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 
 ?>
 

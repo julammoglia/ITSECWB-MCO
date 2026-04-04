@@ -1,13 +1,10 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
+$userId = security_require_login('Login.php');
 ?>
 
 <!DOCTYPE html>

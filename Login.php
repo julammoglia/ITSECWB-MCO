@@ -4,6 +4,7 @@ security_ensure_session_started();
 include "includes/security/EnvLoader.php";
 include "includes/db.php";
 include "includes/security/rate_limit.php";
+require_once "includes/security/input_validation.php";
 require_once "includes/security/password_policy.php";
 
 // Load Cloudflare Turnstile Configuration from environment
@@ -93,7 +94,7 @@ function verify_turnstile_token($token, $secret_key) {
 
 // Handle login form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
-    $email = trim($_POST['email']);
+    $email = security_normalize_email($_POST['email'] ?? '');
     $password = $_POST['password'];
     
     // Check CAPTCHA if required
@@ -113,6 +114,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
         $rl_result = rate_limit($conn, 'login', 8, 600);
         if (!$rl_result['allowed']) {
             $login_error = send_rate_limit_error($rl_result['retry_after'], $email, 'login')['error'];
+        } elseif (!security_is_valid_email($email)) {
+            $login_error = "Please enter a valid email address.";
         } else {
             $stmt = $conn->prepare("SELECT user_id, password, user_role, first_name, last_name FROM users WHERE email = ?");
             $stmt->bind_param("s", $email);
@@ -190,7 +193,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
         } else {
             $firstName = trim($_POST['firstName']);
             $lastName = trim($_POST['lastName']);
-            $email = trim($_POST['regEmail']);
+            $email = security_normalize_email($_POST['regEmail'] ?? '');
             $phoneRaw = isset($_POST['regPhone']) ? trim($_POST['regPhone']) : '';
             $password = $_POST['regPassword'];
             $confirmPassword = $_POST['confirmPassword'];
@@ -198,13 +201,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             if (empty($firstName) || empty($lastName) || empty($email) || empty($phoneRaw) || empty($password) || empty($confirmPassword)) {
                 $register_error = "All fields are required.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
+            } elseif (!security_is_valid_name($firstName) || !security_is_valid_name($lastName)) {
+                $register_error = "Names must contain letters only.";
+                $_SESSION['register_attempts'] = $register_attempts + 1;
             } elseif ($password !== $confirmPassword) {
                 $register_error = "Passwords do not match.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            } elseif (!security_is_valid_email($email)) {
                 $register_error = "Please enter a valid email address.";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
-            } elseif (!preg_match('/^09\d{9}$/', $phoneRaw)) {
+            } elseif (!security_is_valid_phone($phoneRaw)) {
                 $register_error = "Enter a valid PH phone number (e.g., 09XXXXXXXXX — 11 digits starting with 09).";
                 $_SESSION['register_attempts'] = $register_attempts + 1;
             } else {
@@ -304,12 +310,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             $forgot_password_error = send_rate_limit_error($rl_result['retry_after'], $_POST['email'] ?? '', 'forgot_password')['error'];
             $_SESSION['reset_attempts'] = $reset_attempts + 1;
         } else {
-            $email = trim($_POST['email']);
+            $email = security_normalize_email($_POST['email'] ?? '');
             $old_password = $_POST['oldPassword'];
             $new_password = $_POST['newPassword'];
 
             if (empty($email) || empty($old_password) || empty($new_password)) {
                 $forgot_password_error = "All fields are required.";
+                $_SESSION['reset_attempts'] = $reset_attempts + 1;
+            } elseif (!security_is_valid_email($email)) {
+                $forgot_password_error = "Please enter a valid email address.";
                 $_SESSION['reset_attempts'] = $reset_attempts + 1;
             } else {
                 $policyResult = validate_password_policy($new_password);
@@ -392,7 +401,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         <!-- Login Form -->
         <form id="loginForm" method="post" action="" class="active">
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="Enter your email" required>
+            <input type="email" id="email" name="email" placeholder="Enter your email"
+                   value="<?php echo isset($_POST['email']) && empty($login_error) === false ? htmlspecialchars($_POST['email']) : ''; ?>"
+                   inputmode="email" autocomplete="email" maxlength="254"
+                   pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+                   title="Enter a valid email address. The email cannot start with a dot." required>
 
             <label for="password">Password</label>
             <div class="password-container">
@@ -419,21 +432,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
                 <div>
                     <label for="firstName">First Name</label>
                     <input type="text" id="firstName" name="firstName" placeholder="John"
-                           value="<?php echo isset($_POST['firstName']) && empty($register_success) ? htmlspecialchars($_POST['firstName']) : ''; ?>" required>
+                           value="<?php echo isset($_POST['firstName']) && empty($register_success) ? htmlspecialchars($_POST['firstName']) : ''; ?>"
+                           autocomplete="given-name" maxlength="50" pattern="^[A-Za-z]+(?: [A-Za-z]+)*$"
+                           title="Use letters and spaces only." required>
                 </div>
                 <div>
                     <label for="lastName">Last Name</label>
                     <input type="text" id="lastName" name="lastName" placeholder="Doe"
-                           value="<?php echo isset($_POST['lastName']) && empty($register_success) ? htmlspecialchars($_POST['lastName']) : ''; ?>" required>
+                           value="<?php echo isset($_POST['lastName']) && empty($register_success) ? htmlspecialchars($_POST['lastName']) : ''; ?>"
+                           autocomplete="family-name" maxlength="50" pattern="^[A-Za-z]+(?: [A-Za-z]+)*$"
+                           title="Use letters and spaces only." required>
                 </div>
             </div>
 
             <label for="regEmail">Email</label>
             <input type="email" id="regEmail" name="regEmail" placeholder="john.doe@example.com"
-                   value="<?php echo isset($_POST['regEmail']) && empty($register_success) ? htmlspecialchars($_POST['regEmail']) : ''; ?>" required>
+                   value="<?php echo isset($_POST['regEmail']) && empty($register_success) ? htmlspecialchars($_POST['regEmail']) : ''; ?>"
+                   inputmode="email" autocomplete="email" maxlength="254"
+                   pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+                   title="Enter a valid email address. The email cannot start with a dot." required>
 
             <label for="regPhone">Phone Number (PH)</label>
-            <input type="tel" id="regPhone" name="regPhone" placeholder="09XXXXXXXXX" pattern="^09\d{9}$" maxlength="11" value="<?php echo isset($_POST['regPhone']) && empty($register_success) ? htmlspecialchars($_POST['regPhone']) : ''; ?>" required>
+            <input type="tel" id="regPhone" name="regPhone" placeholder="09XXXXXXXXX"
+                   inputmode="numeric" autocomplete="tel-national" pattern="^09\d{9}$" maxlength="11"
+                   value="<?php echo isset($_POST['regPhone']) && empty($register_success) ? htmlspecialchars($_POST['regPhone']) : ''; ?>"
+                   title="Enter exactly 11 digits starting with 09." required>
             <small style="display:block; color:#6b7280; margin-top:6px;">PH mobile only: enter exactly 11 digits starting with 09 (e.g., 09XXXXXXXXX). No spaces or dashes.</small>
 
             <label for="regPassword">Password</label>
@@ -474,13 +497,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         <!-- Forgot Password Form -->
         <form id="forgotPasswordForm" method="post" action="" style="display:none;">
             <label for="forgotEmail">Email</label>
-            <input type="email" id="forgotEmail" name="email" placeholder="Enter your email" required>
+            <input type="email" id="forgotEmail" name="email" placeholder="Enter your email"
+                   value="<?php echo isset($_POST['email']) && (empty($forgot_password_error) === false || empty($forgot_password_success) === false) ? htmlspecialchars($_POST['email']) : ''; ?>"
+                   inputmode="email" autocomplete="email" maxlength="254"
+                   pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+                   title="Enter a valid email address. The email cannot start with a dot." required>
 
             <label for="oldPassword">Old Password</label>
-            <input type="password" id="oldPassword" name="oldPassword" placeholder="Enter old password" required>
+            <input type="password" id="oldPassword" name="oldPassword" placeholder="Enter old password" autocomplete="current-password" required>
 
             <label for="newPassword">New Password</label>
-            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" required>
+            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" autocomplete="new-password" required>
 
             <?php if ($show_reset_captcha && $turnstile_site_key): ?>
             <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstile_site_key); ?>" data-theme="light"></div>
@@ -546,6 +573,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             icon.classList.add('fa-eye');
         }
     }
+
+    function sanitizeEmailInput(input) {
+        input.value = input.value.replace(/\s+/g, '').replace(/^\.+/, '');
+    }
+
+    function sanitizeNameInput(input) {
+        input.value = input.value
+            .replace(/[^A-Za-z\s]/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/^\s+/, '');
+    }
+
+    function sanitizePhoneInput(input) {
+        input.value = input.value.replace(/\D/g, '').slice(0, 11);
+    }
+
+    function bindSanitizer(selector, sanitizer) {
+        document.querySelectorAll(selector).forEach((input) => {
+            input.addEventListener('input', () => sanitizer(input));
+            input.addEventListener('paste', () => {
+                requestAnimationFrame(() => sanitizer(input));
+            });
+        });
+    }
+
+    bindSanitizer('#email, #regEmail, #forgotEmail', sanitizeEmailInput);
+    bindSanitizer('#firstName, #lastName', sanitizeNameInput);
+    bindSanitizer('#regPhone', sanitizePhoneInput);
 
     <?php if (!empty($register_success)) { ?>
         toggleForm('register');

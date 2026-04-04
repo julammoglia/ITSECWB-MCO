@@ -3,35 +3,22 @@ require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
 
-if (isset($_SESSION['user_id'])) {
-    $userId = security_require_login('Login.php');
+$userId = security_require_login('Login.php');
 
-    // Fetch the user's role
-    $role = security_get_user_role($conn, $userId);
+$role = security_get_user_role($conn, $userId);
 
-    if ($role !== null) {
+if ($role === null) {
+    header("Location: User.php?error=notfound");
+    exit();
+}
 
-        // Allow deletion only if role is 'customer'
-        if (strtolower(trim($role)) === 'customer') {
-            $deleteStmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
-            $deleteStmt->bind_param("i", $userId);
-            $deleteStmt->execute();
-
-            session_destroy();
-            header("Location: index.php");
-            exit();
-        } else {
-            // Staff/other users are not allowed to delete
-            header("Location: User.php?error=unauthorized");
-            exit();
-        }
-    } else {
-        // User not found
-        header("Location: User.php?error=notfound");
-        exit();
-    }
-} else {
-    // Not logged in
+if (strtolower(trim($role)) !== 'customer') {
     header("Location: User.php?error=unauthorized");
     exit();
 }
+
+$deleteStmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
+$deleteStmt->bind_param("i", $userId);
+$deleteStmt->execute();
+
+security_logout('Index.php');

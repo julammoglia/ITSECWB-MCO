@@ -7,7 +7,7 @@ require_once 'includes/security/password_policy.php';
 // Handle logout
 security_handle_logout('Index.php');
 
-$userId = security_require_role($conn, 'Admin');
+$userId = security_require_role($conn, 'Admin', 'Login.php', 'Index.php');
 
 // Form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

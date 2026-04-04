@@ -1,10 +1,13 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
 
-$user_id = $_SESSION['user_id'] ?? null; // Replace with actual session handling
+header('Content-Type: application/json');
+
+$user_id = security_require_login_api('User not logged in');
 
 try {
     $query = "SELECT SUM(c.quantity * p.srp_php) as subtotal 

@@ -1,17 +1,15 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 require_once 'includes/db.php';
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die(json_encode(['success' => false, 'error' => 'Invalid request method']));
 }
 
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    die(json_encode(['success' => false, 'error' => 'Unauthorized.']));
-}
-
-$user_id = $_SESSION['user_id'];
+$user_id = security_require_login_api('Unauthorized.');
 $payment_method = $_POST['payment_method'] ?? '';
 
 // Validate payment method

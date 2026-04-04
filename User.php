@@ -15,10 +15,7 @@ $stmt->execute();
 $userResult = $stmt->get_result()->fetch_assoc();
 
 if (!$userResult) {
-    // if user not found, redirect to login
-    session_destroy();
-    header("Location: Login.php");
-    exit();
+    security_logout('Login.php');
 }
 
 

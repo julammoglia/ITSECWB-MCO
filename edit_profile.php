@@ -4,8 +4,13 @@ security_ensure_session_started();
 require_once 'includes/db.php';
 require_once 'includes/security/password_policy.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
-    $userId = $_SESSION['user_id'];
+$userId = security_require_login('Login.php');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    security_redirect('User.php');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Branch by action: profile update or password change
     $action = isset($_POST['action']) ? $_POST['action'] : 'update_profile';

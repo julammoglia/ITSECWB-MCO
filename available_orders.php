@@ -1,12 +1,10 @@
 <?php
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
-security_handle_logout('index.php');
-security_require_login('Login.php');
-
 require_once 'includes/db.php'; 
+security_handle_logout('index.php');
 
-$userId = (int) $_SESSION['user_id'];
+$userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 
 // Handle order assignment
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

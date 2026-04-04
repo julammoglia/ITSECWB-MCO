@@ -1,17 +1,13 @@
 <?php
-session_start();
+require_once 'includes/security/auth.php';
+security_ensure_session_started();
 include('includes/db.php');
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
 
 header('Content-Type: application/json');
 
-$user_id = $_SESSION['user_id'] ?? null;
-
-if (!$user_id) {
-    echo json_encode(['error' => 'User not logged in']);
-    exit;
-}
+$user_id = security_require_login_api('User not logged in');
 
 $action = $_GET['action'] ?? 'get';
 

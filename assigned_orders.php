@@ -5,7 +5,7 @@ include ('includes/db.php');
 
 security_handle_logout('index.php');
 
-$userId = security_require_login('Login.php');
+$userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 
 // Handle status update
 if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_POST['order_id']) && isset($_POST['new_status'])) {
