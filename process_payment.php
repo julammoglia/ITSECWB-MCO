@@ -7,8 +7,15 @@ require_once 'includes/security/input_validation.php';
 
 header('Content-Type: application/json');
 
+function checkout_fail(string $message, int $status = 400): void
+{
+    http_response_code($status);
+    echo json_encode(['success' => false, 'error' => $message]);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die(json_encode(['success' => false, 'error' => 'Invalid request method']));
+    checkout_fail('Invalid request method.', 405);
 }
 
 $user_id = security_require_login_api('Unauthorized.');
@@ -18,8 +25,7 @@ $payment_method = $_POST['payment_method'] ?? '';
 // Validate payment method
 $allowed_methods = ['card', 'ewallet', 'cash'];
 if (!in_array($payment_method, $allowed_methods, true)) {
-    http_response_code(400);
-    die(json_encode(['success' => false, 'error' => 'Invalid payment method.']));
+    checkout_fail('Invalid payment method.');
 }
 
 // Validate shipping fields for card and ewallet payments
@@ -38,37 +44,90 @@ if ($payment_method === 'card' || $payment_method === 'ewallet') {
     $phone_regex   = '/^09\d{9}$/';
 
     if (!security_is_valid_name($first_name) || mb_strlen($first_name) > 50) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid first name.']));
+        checkout_fail('Invalid first name.');
     }
     if (!security_is_valid_name($last_name) || mb_strlen($last_name) > 50) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid last name.']));
+        checkout_fail('Invalid last name.');
     }
     if (!preg_match($address_regex, $address)) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid address.']));
+        checkout_fail('Invalid address.');
     }
     if (!preg_match($city_regex, $city)) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid city.']));
+        checkout_fail('Invalid city.');
     }
     if (!preg_match($postal_regex, $postal_code)) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid postal code. Must be 4 digits.']));
+        checkout_fail('Invalid postal code. Must be 4 digits.');
     }
     if (!security_is_valid_phone($phone)) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid phone number. Must be 11 digits starting with 09.']));
+        checkout_fail('Invalid phone number. Must be 11 digits starting with 09.');
     }
 }
 
 // Validate ewallet account number
+if ($payment_method === 'card') {
+    $card_number = trim((string) ($_POST['card_number'] ?? ''));
+    $cardholder_name = trim((string) ($_POST['cardholder_name'] ?? ''));
+    $expiry_date = trim((string) ($_POST['expiry_date'] ?? ''));
+    $cvv = trim((string) ($_POST['cvv'] ?? ''));
+    $billing_address = trim((string) ($_POST['billing_address'] ?? ''));
+
+    if (preg_match('/^\d{4}\s\d{4}\s\d{4}\s\d{4}$/', $card_number) !== 1) {
+        checkout_fail('Invalid card number.');
+    }
+    if (!security_is_valid_name($cardholder_name) || mb_strlen($cardholder_name) > 60) {
+        checkout_fail('Invalid cardholder name.');
+    }
+    if (preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expiry_date) !== 1) {
+        checkout_fail('Invalid expiry date.');
+    }
+
+    [$expiryMonth, $expiryYearSuffix] = explode('/', $expiry_date, 2);
+    $expiryMonth = (int) $expiryMonth;
+    $expiryYear = 2000 + (int) $expiryYearSuffix;
+    $currentMonth = (int) date('n');
+    $currentYear = (int) date('Y');
+    if ($expiryYear < $currentYear || ($expiryYear === $currentYear && $expiryMonth < $currentMonth)) {
+        checkout_fail('Card is expired.');
+    }
+
+    if (preg_match('/^\d{3}$/', $cvv) !== 1) {
+        checkout_fail('Invalid CVV.');
+    }
+    if (!preg_match($address_regex, $billing_address)) {
+        checkout_fail('Invalid billing address.');
+    }
+}
+
 if ($payment_method === 'ewallet') {
     $ewallet_account = $_POST['ewallet_account'] ?? '';
     if (!security_is_valid_phone($ewallet_account)) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'error' => 'Invalid e-wallet phone number. Must be 11 digits starting with 09.']));
+        checkout_fail('Invalid e-wallet phone number. Must be 11 digits starting with 09.');
+    }
+}
+
+if ($payment_method === 'cash') {
+    $pickup_location = trim((string) ($_POST['pickup_location'] ?? ''));
+    $pickup_date = trim((string) ($_POST['pickup_date'] ?? ''));
+    $pickup_time = trim((string) ($_POST['pickup_time'] ?? ''));
+
+    $allowed_locations = ['main-branch', 'makati-branch', 'ortigas-branch'];
+    $allowed_times = ['9-11', '11-1', '1-3', '3-5'];
+
+    if (!in_array($pickup_location, $allowed_locations, true)) {
+        checkout_fail('Invalid pickup location.');
+    }
+    if (!in_array($pickup_time, $allowed_times, true)) {
+        checkout_fail('Invalid pickup time.');
+    }
+
+    $pickupDateObject = DateTime::createFromFormat('Y-m-d', $pickup_date);
+    if (!$pickupDateObject || $pickupDateObject->format('Y-m-d') !== $pickup_date) {
+        checkout_fail('Invalid pickup date.');
+    }
+
+    $minimumPickupDate = (new DateTime('today'))->modify('+1 day');
+    if ($pickupDateObject < $minimumPickupDate) {
+        checkout_fail('Pickup date must be at least one day in advance.');
     }
 }
 

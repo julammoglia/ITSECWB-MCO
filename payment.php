@@ -470,6 +470,77 @@ $userId = security_require_login('Login.php');
         const postalRegex = /^\d{4}$/;
         const phPhoneRegex = /^09\d{9}$/; // ADDED: PH standard mobile number
 
+        function normalizeSpaces(value) {
+            return value.replace(/\s+/g, ' ').trimStart();
+        }
+
+        function sanitizeNameValue(value) {
+            return normalizeSpaces(value)
+                .replace(/[^A-Za-zÀ-ÿ\s\-'.]/g, '')
+                .replace(/\s{2,}/g, ' ');
+        }
+
+        function sanitizeAddressValue(value) {
+            return normalizeSpaces(value)
+                .replace(/[^A-Za-zÀ-ÿ0-9\s\-'.#,]/g, '')
+                .replace(/\s{2,}/g, ' ');
+        }
+
+        function sanitizePhoneValue(value) {
+            return value.replace(/\D/g, '').slice(0, 11);
+        }
+
+        function sanitizePostalValue(value) {
+            return value.replace(/\D/g, '').slice(0, 4);
+        }
+
+        function sanitizeCardNumberValue(value) {
+            const digits = value.replace(/\D/g, '').slice(0, 16);
+            return digits.replace(/(.{4})/g, '$1 ').trim();
+        }
+
+        function sanitizeExpiryValue(value) {
+            const digits = value.replace(/\D/g, '').slice(0, 4);
+            if (digits.length <= 2) {
+                return digits;
+            }
+            return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        }
+
+        function sanitizeCvvValue(value) {
+            return value.replace(/\D/g, '').slice(0, 3);
+        }
+
+        function bindInputSanitizer(id, sanitizer) {
+            const input = document.getElementById(id);
+            if (!input) return;
+
+            input.addEventListener('input', () => {
+                input.value = sanitizer(input.value);
+            });
+
+            input.addEventListener('paste', () => {
+                requestAnimationFrame(() => {
+                    input.value = sanitizer(input.value);
+                });
+            });
+        }
+
+        function bindErrorClear(inputId, errorId) {
+            const input = document.getElementById(inputId);
+            const error = document.getElementById(errorId);
+            if (!input || !error) return;
+
+            const clearError = () => {
+                input.classList.remove('input-invalid');
+                error.textContent = '';
+                error.style.display = 'none';
+            };
+
+            input.addEventListener('input', clearError);
+            input.addEventListener('change', clearError);
+        }
+
         function isFutureOrCurrentExpiry(mmYY) {
             const [mm, yy] = mmYY.split('/');
             const month = parseInt(mm, 10);
@@ -484,6 +555,36 @@ $userId = security_require_login('Login.php');
             if (year === currentYear && month >= currentMonth) return true;
             return false;
         }
+
+        bindInputSanitizer('card-number', sanitizeCardNumberValue);
+        bindInputSanitizer('cardholder-name', sanitizeNameValue);
+        bindInputSanitizer('expiry-date', sanitizeExpiryValue);
+        bindInputSanitizer('cvv', sanitizeCvvValue);
+        bindInputSanitizer('billing-address', sanitizeAddressValue);
+        bindInputSanitizer('ewallet-account', sanitizePhoneValue);
+        bindInputSanitizer('first-name', sanitizeNameValue);
+        bindInputSanitizer('last-name', sanitizeNameValue);
+        bindInputSanitizer('address', sanitizeAddressValue);
+        bindInputSanitizer('city', sanitizeNameValue);
+        bindInputSanitizer('postal-code', sanitizePostalValue);
+        bindInputSanitizer('phone', sanitizePhoneValue);
+
+        bindErrorClear('card-number', 'err-card-number');
+        bindErrorClear('cardholder-name', 'err-cardholder-name');
+        bindErrorClear('expiry-date', 'err-expiry-date');
+        bindErrorClear('cvv', 'err-cvv');
+        bindErrorClear('billing-address', 'err-billing-address');
+        bindErrorClear('ewallet-provider', 'err-ewallet-provider');
+        bindErrorClear('ewallet-account', 'err-ewallet-account');
+        bindErrorClear('pickup-location', 'err-pickup-location');
+        bindErrorClear('pickup-date', 'err-pickup-date');
+        bindErrorClear('pickup-time', 'err-pickup-time');
+        bindErrorClear('first-name', 'err-first-name');
+        bindErrorClear('last-name', 'err-last-name');
+        bindErrorClear('address', 'err-address');
+        bindErrorClear('city', 'err-city');
+        bindErrorClear('postal-code', 'err-postal-code');
+        bindErrorClear('phone', 'err-phone');
 
         // Form validation and completion
         document.getElementById('complete-payment').addEventListener('click', () => {
@@ -501,15 +602,27 @@ $userId = security_require_login('Login.php');
             formData.append('csrf_token', csrfToken);
 
             if (activeMethod === 'card' || activeMethod === 'ewallet') {
-                formData.append('first_name',  document.getElementById('first-name').value);
-                formData.append('last_name',   document.getElementById('last-name').value);
-                formData.append('address',     document.getElementById('address').value);
-                formData.append('city',        document.getElementById('city').value);
-                formData.append('postal_code', document.getElementById('postal-code').value);
-                formData.append('phone',       document.getElementById('phone').value);
+                formData.append('first_name',  sanitizeNameValue(document.getElementById('first-name').value).trim());
+                formData.append('last_name',   sanitizeNameValue(document.getElementById('last-name').value).trim());
+                formData.append('address',     sanitizeAddressValue(document.getElementById('address').value).trim());
+                formData.append('city',        sanitizeNameValue(document.getElementById('city').value).trim());
+                formData.append('postal_code', sanitizePostalValue(document.getElementById('postal-code').value));
+                formData.append('phone',       sanitizePhoneValue(document.getElementById('phone').value));
+            }
+            if (activeMethod === 'card') {
+                formData.append('card_number',     sanitizeCardNumberValue(document.getElementById('card-number').value));
+                formData.append('cardholder_name', sanitizeNameValue(document.getElementById('cardholder-name').value).trim());
+                formData.append('expiry_date',     sanitizeExpiryValue(document.getElementById('expiry-date').value));
+                formData.append('cvv',             sanitizeCvvValue(document.getElementById('cvv').value));
+                formData.append('billing_address', sanitizeAddressValue(document.getElementById('billing-address').value).trim());
             }
             if (activeMethod === 'ewallet') {
-                formData.append('ewallet_account', document.getElementById('ewallet-account').value);
+                formData.append('ewallet_account', sanitizePhoneValue(document.getElementById('ewallet-account').value));
+            }
+            if (activeMethod === 'cash') {
+                formData.append('pickup_location', document.getElementById('pickup-location').value);
+                formData.append('pickup_date',     document.getElementById('pickup-date').value);
+                formData.append('pickup_time',     document.getElementById('pickup-time').value);
             }
 
             fetch('process_payment.php', {
@@ -538,6 +651,28 @@ $userId = security_require_login('Login.php');
 
         function validateForm(activeMethod) {
             clearAllErrors();
+
+            const fieldSanitizers = [
+                ['card-number', sanitizeCardNumberValue],
+                ['cardholder-name', sanitizeNameValue],
+                ['expiry-date', sanitizeExpiryValue],
+                ['cvv', sanitizeCvvValue],
+                ['billing-address', sanitizeAddressValue],
+                ['ewallet-account', sanitizePhoneValue],
+                ['first-name', sanitizeNameValue],
+                ['last-name', sanitizeNameValue],
+                ['address', sanitizeAddressValue],
+                ['city', sanitizeNameValue],
+                ['postal-code', sanitizePostalValue],
+                ['phone', sanitizePhoneValue],
+            ];
+
+            fieldSanitizers.forEach(([id, sanitizer]) => {
+                const field = document.getElementById(id);
+                if (field) {
+                    field.value = sanitizer(field.value);
+                }
+            });
 
             // Shipping required for CARD + EWALLET
             if (activeMethod === 'card' || activeMethod === 'ewallet') {
