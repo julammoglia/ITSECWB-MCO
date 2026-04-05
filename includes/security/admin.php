@@ -238,10 +238,8 @@ if (!function_exists('security_admin_validate_role')) {
             return false;
         }
 
-        foreach (['Staff', 'Admin'] as $allowedRole) {
-            if (strcasecmp($role, $allowedRole) === 0) {
-                return $allowedRole;
-            }
+        if (strcasecmp($role, 'Staff') === 0) {
+            return 'Staff';
         }
 
         return false;
@@ -301,7 +299,7 @@ if (!function_exists('security_admin_validate_staff_payload')) {
         }
 
         if ($role === false) {
-            return security_admin_validation_result(false, 'Select a valid admin role.');
+            return security_admin_validation_result(false, 'Only staff accounts can be created from the admin dashboard.');
         }
 
         $policyResult = validate_password_policy($password);

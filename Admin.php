@@ -600,10 +600,8 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
       <input name="email" type="email" placeholder="Email" maxlength="45" inputmode="email" autocomplete="email" pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$" title="Enter a valid email address. The email cannot start with a dot." required>
       <input name="phone" type="tel" placeholder="09XXXXXXXXX" inputmode="numeric" autocomplete="tel-national" pattern="^09\d{9}$" title="Enter exactly 11 digits starting with 09." maxlength="11" required>
       <input name="password" type="password" placeholder="Password (min 12 chars)" required minlength="12" title="At least 12 characters with 3 of 4: uppercase, lowercase, numbers, special characters. No spaces.">
-      <select name="user_role" required>
-        <option value="Staff">Staff</option>
-        <option value="Admin">Admin</option>
-      </select>
+      <input type="hidden" name="user_role" value="Staff">
+      <input type="text" value="Staff" aria-label="Staff role" readonly>
       <button type="submit" class="yellow-btn staff-submit-btn">Add Staff Member</button>
     </form>
     </div>
