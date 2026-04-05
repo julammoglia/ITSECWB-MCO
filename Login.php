@@ -13,8 +13,6 @@ $turnstile_site_key = EnvLoader::get('TURNSTILE_SITE_KEY');
 
 // Initialize variables
 $login_error = "";
-$forgot_password_error = "";
-$forgot_password_success = "";
 $register_error = "";
 $register_success = "";
 
@@ -27,7 +25,6 @@ $client_ip = get_client_ip();
 
 // Get failed attempts from rate_limit table by IP
 $login_attempts = 0;
-$reset_attempts = 0;
 $register_attempts = 0;
 
 // Check login attempts from rate_limit table
@@ -50,19 +47,8 @@ if ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Check reset attempts from rate_limit table
-$stmt = $conn->prepare("SELECT count FROM rate_limits WHERE rl_key = 'forgot_password' AND ip = ? AND window_start > UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 10 MINUTE))");
-$stmt->bind_param("s", $client_ip);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($row = $result->fetch_assoc()) {
-    $reset_attempts = $row['count'];
-}
-$stmt->close();
-
 // Determine if CAPTCHA should be shown
 $show_login_captcha = $login_attempts >= 3;
-$show_reset_captcha = $reset_attempts >= 2;
 $show_register_captcha = $register_attempts >= 3;
 
 // Function to verify Turnstile token
@@ -302,84 +288,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
     }
 }
 
-// Handle forgot password form submission
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
-    if (!security_verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        $forgot_password_error = "Your session token is invalid. Please refresh the page and try again.";
-    }
-
-    // Check CAPTCHA if required
-    if ($show_reset_captcha && $turnstile_secret_key) {
-        if (empty($_POST['cf-turnstile-response'])) {
-            $forgot_password_error = "Please complete the CAPTCHA verification.";
-        } else {
-            $captcha_result = verify_turnstile_token($_POST['cf-turnstile-response'], $turnstile_secret_key);
-            if (!$captcha_result['success']) {
-                $forgot_password_error = "CAPTCHA verification failed. Please try again.";
-            }
-        }
-    }
-    
-    if (empty($forgot_password_error)) {
-        // Rate limit: forgot password (8 per 10 minutes)
-        $rl_result = rate_limit($conn, 'forgot_password', 8, 600);
-        if (!$rl_result['allowed']) {
-            $forgot_password_error = send_rate_limit_error($rl_result['retry_after'], $_POST['email'] ?? '', 'forgot_password')['error'];
-            $_SESSION['reset_attempts'] = $reset_attempts + 1;
-        } else {
-            $email = security_normalize_email($_POST['email'] ?? '');
-            $old_password = $_POST['oldPassword'];
-            $new_password = $_POST['newPassword'];
-
-            if (empty($email) || empty($old_password) || empty($new_password)) {
-                $forgot_password_error = "All fields are required.";
-                $_SESSION['reset_attempts'] = $reset_attempts + 1;
-            } elseif (!security_is_valid_email($email)) {
-                $forgot_password_error = "Please enter a valid email address.";
-                $_SESSION['reset_attempts'] = $reset_attempts + 1;
-            } else {
-                $policyResult = validate_password_policy($new_password);
-                if (!$policyResult['valid']) {
-                    $forgot_password_error = implode(' ', $policyResult['errors']);
-                    $_SESSION['reset_attempts'] = $reset_attempts + 1;
-                } else {
-                $stmt = $conn->prepare("SELECT user_id, password FROM users WHERE email = ?");
-                $stmt->bind_param("s", $email);
-                $stmt->execute();
-                $stmt->store_result();
-
-                if ($stmt->num_rows === 1) {
-                    $stmt->bind_result($user_id, $hashed_password);
-                    $stmt->fetch();
-
-                    if (password_verify($old_password, $hashed_password)) {
-                        $newPasswordHash = security_hash_password($new_password);
-                        $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-                        $update_stmt->bind_param("ss", $newPasswordHash, $email);
-                        
-                        if ($update_stmt->execute()) {
-                            $forgot_password_success = "Password updated successfully. You can now login with your new password.";
-                            $_SESSION['reset_attempts'] = 0;
-                        } else {
-                            $forgot_password_error = "Something went wrong. Please try again.";
-                            $_SESSION['reset_attempts'] = $reset_attempts + 1;
-                        }
-                        $update_stmt->close();
-                    } else {
-                        $forgot_password_error = "Old password is incorrect.";
-                        $_SESSION['reset_attempts'] = $reset_attempts + 1;
-                    }
-                } else {
-                    $forgot_password_error = "No account found with that email.";
-                    $_SESSION['reset_attempts'] = $reset_attempts + 1;
-                }
-                $stmt->close();
-                } // end password policy check
-            }
-        }
-    }
-}
-
 ?>
 
 <!DOCTYPE html>
@@ -391,7 +299,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles/login.css">
-    <?php if ($turnstile_site_key && ($show_login_captcha || $show_register_captcha || $show_reset_captcha)): ?>
+    <?php if ($turnstile_site_key && ($show_login_captcha || $show_register_captcha)): ?>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <style>
@@ -431,10 +339,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
                 <i onclick="togglePassword('password')" class="fa fa-eye"></i>
             </div>
 
-            <div class="terms">
-                <a href="#" id="forgotPasswordLink" onclick="toggleForm('forgotPassword')">Reset Password?</a>
-            </div>
-            
             <?php if ($show_login_captcha && $turnstile_site_key): ?>
             <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstile_site_key); ?>" data-theme="light"></div>
             <?php endif; ?>
@@ -512,32 +416,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
 
             <button type="submit" name="register"><i class="fa fa-user-plus"></i>Create Account</button>
         </form>
-
-        <!-- Forgot Password Form -->
-        <form id="forgotPasswordForm" method="post" action="" style="display:none;">
-            <?php echo security_csrf_input(); ?>
-            <label for="forgotEmail">Email</label>
-            <input type="email" id="forgotEmail" name="email" placeholder="Enter your email"
-                   value="<?php echo isset($_POST['email']) && (empty($forgot_password_error) === false || empty($forgot_password_success) === false) ? htmlspecialchars($_POST['email']) : ''; ?>"
-                   inputmode="email" autocomplete="email" maxlength="254"
-                   pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
-                   title="Enter a valid email address. The email cannot start with a dot." required>
-
-            <label for="oldPassword">Old Password</label>
-            <input type="password" id="oldPassword" name="oldPassword" placeholder="Enter old password" autocomplete="current-password" required>
-
-            <label for="newPassword">New Password</label>
-            <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" autocomplete="new-password" required>
-
-            <?php if ($show_reset_captcha && $turnstile_site_key): ?>
-            <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstile_site_key); ?>" data-theme="light"></div>
-            <?php endif; ?>
-
-            <?php if (!empty($forgot_password_error)) { echo "<p style='color: red; margin: 10px 0;'>$forgot_password_error</p>"; } ?>
-            <?php if (!empty($forgot_password_success)) { echo "<p style='color: green; margin: 10px 0;'>$forgot_password_success</p>"; } ?>
-
-            <button type="submit" name="forgot_password">Reset Password</button>
-        </form>
     </div>
 </div>
 
@@ -545,23 +423,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
     function toggleForm(form) {
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
-        const forgotPasswordForm = document.getElementById('forgotPasswordForm');
         
         if (form === 'login') {
             loginForm.style.display = 'block';
             registerForm.style.display = 'none';
-            forgotPasswordForm.style.display = 'none';
             setActiveButton('login');
         } else if (form === 'register') {
             loginForm.style.display = 'none';
             registerForm.style.display = 'block';
-            forgotPasswordForm.style.display = 'none';
             setActiveButton('register');
-        } else if (form === 'forgotPassword') {
-            loginForm.style.display = 'none';
-            registerForm.style.display = 'none';
-            forgotPasswordForm.style.display = 'block';
-            setActiveButton('forgotPassword');
         }
     }
 
@@ -571,11 +441,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
             button.classList.remove('active');
         });
         
-        if (form !== 'forgotPassword') {
-            const activeButton = document.getElementById(form + 'Btn');
-            if (activeButton) {
-                activeButton.classList.add('active');
-            }
+        const activeButton = document.getElementById(form + 'Btn');
+        if (activeButton) {
+            activeButton.classList.add('active');
         }
     }
 
@@ -618,7 +486,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         });
     }
 
-    bindSanitizer('#email, #regEmail, #forgotEmail', sanitizeEmailInput);
+    bindSanitizer('#email, #regEmail', sanitizeEmailInput);
     bindSanitizer('#firstName, #lastName', sanitizeNameInput);
     bindSanitizer('#regPhone', sanitizePhoneInput);
 
@@ -626,8 +494,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['forgot_password'])) {
         toggleForm('register');
     <?php } elseif (!empty($register_error)) { ?>
         toggleForm('register');
-    <?php } elseif (!empty($forgot_password_error) || !empty($forgot_password_success)) { ?>
-        toggleForm('forgotPassword');
     <?php } ?>
 </script>
 
