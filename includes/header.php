@@ -88,7 +88,7 @@ if (file_exists(__DIR__ . '/db.php')) {
     <!-- Cart fetcher -->
     <!-- Cart fetcher -->
 <script>
-    window.APP_CSRF_TOKEN = <?php echo json_encode(security_get_csrf_token()); ?>;
+    window.APP_CSRF_TOKEN = <?php echo json_encode(security_get_csrf_token(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
     // Enhanced Cart JavaScript
     document.getElementById('cart-toggle').addEventListener('click', function () {
@@ -106,6 +106,12 @@ function loadCart() {
     .then(data => {
         const container = document.getElementById('cart-items');
         container.innerHTML = '';
+
+        if (!data || data.success === false) {
+            const message = data?.error || 'Unable to load your cart right now.';
+            container.innerHTML = `<p class="empty-cart-msg">${message}</p>`;
+            return;
+        }
         
         if (data.items.length === 0) {
             container.innerHTML = '<p class="empty-cart-msg">Your cart is empty.</p>';

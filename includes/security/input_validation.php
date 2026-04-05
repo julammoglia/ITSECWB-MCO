@@ -31,7 +31,7 @@ if (!function_exists('security_is_valid_name')) {
     {
         $name = trim($name);
 
-        return $name !== '' && preg_match('/^[A-Za-z]+(?: [A-Za-z]+)*$/', $name) === 1;
+        return $name !== '' && preg_match("/^[\p{L}]+(?:[ .'-][\p{L}]+)*$/u", $name) === 1;
     }
 }
 
@@ -39,5 +39,18 @@ if (!function_exists('security_is_valid_phone')) {
     function security_is_valid_phone(string $phone): bool
     {
         return preg_match('/^09\d{9}$/', trim($phone)) === 1;
+    }
+}
+
+if (!function_exists('security_phone_to_local_format')) {
+    function security_phone_to_local_format(?string $phone): string
+    {
+        $phone = trim((string) $phone);
+
+        if ($phone !== '' && preg_match('/^\+639\d{9}$/', $phone) === 1) {
+            return '0' . substr($phone, 3);
+        }
+
+        return $phone;
     }
 }

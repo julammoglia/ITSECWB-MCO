@@ -76,17 +76,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Default: profile update flow
     $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
     $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;
+    $email = security_normalize_email($_POST['email'] ?? '');
+    $phone = security_phone_to_local_format($_POST['phone'] ?? '');
 
     $firstNameSubmitted = ($firstName !== '' && $firstName !== null);
     $lastNameSubmitted  = ($lastName  !== '' && $lastName  !== null);
+    $emailSubmitted = ($email !== '');
+    $phoneSubmitted = ($phone !== '');
 
     // Get current values from database
-    $stmt = $conn->prepare("SELECT first_name, last_name, profile_picture FROM users WHERE user_id = ?");
+    $stmt = $conn->prepare("SELECT first_name, last_name, email, phone, profile_picture FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $result = $stmt->get_result();
     if (!$result || $result->num_rows === 0) {
-        echo "User not found.";
+        header("Location: User.php?error=notfound");
         exit();
     }
 
@@ -101,6 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lastName = $current['last_name'];
     }
 
+    if (!$emailSubmitted) {
+        $email = security_normalize_email($current['email']);
+    }
+
+    if (!$phoneSubmitted) {
+        $phone = security_phone_to_local_format($current['phone'] ?? '');
+    }
+
     // Validate name format if new values were submitted
     if ($firstNameSubmitted && !security_is_valid_name($firstName)) {
         header("Location: User.php?error=invalid_name");
@@ -111,10 +123,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Update name
-    $updateStmt = $conn->prepare("UPDATE users SET first_name = ?, last_name = ? WHERE user_id = ?");
-    $updateStmt->bind_param("ssi", $firstName, $lastName, $userId);
+    if ($email === '' || mb_strlen($email) > 45 || !security_is_valid_email($email)) {
+        header("Location: User.php?error=invalid_email");
+        exit();
+    }
+
+    if ($phone === '' || !security_is_valid_phone($phone)) {
+        header("Location: User.php?error=invalid_phone");
+        exit();
+    }
+
+    $emailCheckStmt = $conn->prepare("SELECT 1 FROM users WHERE email = ? AND user_id <> ?");
+    $emailCheckStmt->bind_param("si", $email, $userId);
+    $emailCheckStmt->execute();
+    $emailCheckStmt->store_result();
+    if ($emailCheckStmt->num_rows > 0) {
+        $emailCheckStmt->close();
+        header("Location: User.php?error=email_exists");
+        exit();
+    }
+    $emailCheckStmt->close();
+
+    // Update profile fields
+    $updateStmt = $conn->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ? WHERE user_id = ?");
+    $updateStmt->bind_param("ssssi", $firstName, $lastName, $email, $phone, $userId);
     $updateStmt->execute();
+
+    $_SESSION['first_name'] = $firstName;
+    $_SESSION['last_name'] = $lastName;
+    $_SESSION['email'] = $email;
 
     // Handle profile picture deletion
     if (isset($_POST['delete_picture']) && $_POST['delete_picture'] === '1') {
@@ -167,23 +204,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = $uploadDir . $newFilename;
 
         // Delete old profile picture if exists
-        if (!empty($current['profile_picture'])) {
-            $oldFile = $uploadDir . $current['profile_picture'];
-            if (file_exists($oldFile)) {
-                unlink($oldFile);
-            }
-        }
-
         // Move uploaded file
         if (move_uploaded_file($file['tmp_name'], $destination)) {
             // Update database with new filename
             $picStmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE user_id = ?");
             $picStmt->bind_param("si", $newFilename, $userId);
-            $picStmt->execute();
+            if ($picStmt->execute()) {
+                if (!empty($current['profile_picture'])) {
+                    $oldFile = $uploadDir . $current['profile_picture'];
+                    if (file_exists($oldFile)) {
+                        unlink($oldFile);
+                    }
+                }
+            } else {
+                if (file_exists($destination)) {
+                    unlink($destination);
+                }
+            }
+            $picStmt->close();
         }
     }
 
-    header("Location: User.php");
+    header("Location: User.php?profile=updated");
     exit();
 } else {
     echo "Unauthorized access.";

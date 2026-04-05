@@ -182,15 +182,15 @@ if ($category_result->num_rows > 0) {
 let currentProduct = null;
 
 // Store products data for modal
-const productsData = <?php echo json_encode($products); ?>;
+const productsData = <?php echo json_encode($products, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 // Add currency data for JavaScript
-const currencyData = {
-    currency_code: <?php echo $current_currency['currency_code']; ?>,
-    currency_name: '<?php echo $current_currency['currency_name']; ?>',
-    symbol: '<?php echo $current_currency['symbol']; ?>',
-    price_php: <?php echo $current_currency['price_php']; ?>
-};
+const currencyData = <?php echo json_encode([
+    'currency_code' => $current_currency['currency_code'],
+    'currency_name' => $current_currency['currency_name'],
+    'symbol' => $current_currency['symbol'],
+    'price_php' => $current_currency['price_php'],
+], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 // Store favorite states
 let favoriteStates = {};
@@ -425,7 +425,8 @@ function loadFavoriteStates() {
 }
 
 function openProductModal(productCode) {
-    const product = productsData.find(p => p.product_code === productCode);
+    const normalizedProductCode = String(productCode);
+    const product = productsData.find(p => String(p.product_code) === normalizedProductCode);
     if (!product) return;
 
     currentProduct = product;
@@ -546,7 +547,7 @@ function updateFavoriteButtons(productCode, isFavorite) {
     }
     
     // Update modal favorite button (only if current product matches)
-    if (currentProduct && currentProduct.product_code === productCode) {
+    if (currentProduct && String(currentProduct.product_code) === String(productCode)) {
         const modalFavoriteBtn = document.getElementById('modalFavoriteBtn');
         updateFavoriteButton(modalFavoriteBtn, isFavorite);
     }

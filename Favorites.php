@@ -178,7 +178,7 @@ $conn->close();
 let currentProduct = null;
 
 // Store products data for modal
-const favoritesData = <?php echo json_encode($favorites); ?>;
+const favoritesData = <?php echo json_encode($favorites, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 // Store favorite states - all items on this page are favorites
 let favoriteStates = {};
@@ -224,7 +224,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function openProductModal(productCode) {
-    const product = favoritesData.find(p => p.product_code === productCode);
+    const normalizedProductCode = String(productCode);
+    const product = favoritesData.find(p => String(p.product_code) === normalizedProductCode);
     if (!product) return;
 
     currentProduct = product;
@@ -313,7 +314,7 @@ function toggleFavorite(productCode) {
             // If item was removed from favorites, remove from page
             if (data.action === 'removed') {
                 // Close modal if it's open for this product
-                if (currentProduct && currentProduct.product_code === productCode) {
+                if (currentProduct && String(currentProduct.product_code) === String(productCode)) {
                     closeProductModal();
                 }
                 
@@ -349,7 +350,7 @@ function updateFavoriteButtons(productCode, isFavorite) {
     }
     
     // Update modal favorite button (only if current product matches)
-    if (currentProduct && currentProduct.product_code === productCode) {
+    if (currentProduct && String(currentProduct.product_code) === String(productCode)) {
         const modalFavoriteBtn = document.getElementById('modalFavoriteBtn');
         updateFavoriteButton(modalFavoriteBtn, isFavorite);
     }

@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 include('includes/db.php');
+require_once 'includes/security.php';
 
 header('Content-Type: application/json');
 
@@ -23,7 +24,12 @@ try {
     echo json_encode(['success' => true, 'favorites' => $favorites]);
     
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    log_event('CUSTOMER_FAVORITES_FETCH_FAILURE', [
+        'user_id' => $user_id,
+        'exception' => $e->getMessage(),
+    ]);
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Unable to load favorites right now. Please try again.']);
 }
 
 $conn->close();

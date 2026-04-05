@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 include('includes/db.php');
+require_once 'includes/security.php';
 
 header('Content-Type: application/json');
 
@@ -12,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $user_id = security_require_login_api('User not logged in');
 security_require_csrf_api();
-$product_code = $_POST['product_code'] ?? null;
+$product_code = security_validate_positive_number($_POST['product_code'] ?? null, false);
 
 if (!$product_code) {
     echo json_encode(['success' => false, 'error' => 'Product code required']);
@@ -20,6 +21,19 @@ if (!$product_code) {
 }
 
 try {
+    $product_stmt = $conn->prepare("SELECT 1 FROM products WHERE product_code = ?");
+    $product_stmt->bind_param("i", $product_code);
+    $product_stmt->execute();
+    $product_stmt->store_result();
+
+    if ($product_stmt->num_rows === 0) {
+        $product_stmt->close();
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Product not found']);
+        exit;
+    }
+    $product_stmt->close();
+
     // Check if product is already in favorites
     $check_sql = "SELECT COUNT(*) as count FROM isfavorite WHERE user_id = ? AND product_code = ?";
     $check_stmt = $conn->prepare($check_sql);
@@ -47,7 +61,13 @@ try {
     }
     
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    log_event('CUSTOMER_FAVORITE_FAILURE', [
+        'user_id' => $user_id,
+        'product_code' => $product_code,
+        'exception' => $e->getMessage(),
+    ]);
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Unable to update favorites right now. Please try again.']);
 }
 
 $conn->close();

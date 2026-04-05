@@ -2,6 +2,8 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/security.php';
+require_once 'includes/security/input_validation.php';
 
 header('Content-Type: application/json');
 
@@ -35,11 +37,11 @@ if ($payment_method === 'card' || $payment_method === 'ewallet') {
     $postal_regex  = '/^\d{4}$/';
     $phone_regex   = '/^09\d{9}$/';
 
-    if (!preg_match($name_regex, $first_name)) {
+    if (!security_is_valid_name($first_name) || mb_strlen($first_name) > 50) {
         http_response_code(400);
         die(json_encode(['success' => false, 'error' => 'Invalid first name.']));
     }
-    if (!preg_match($name_regex, $last_name)) {
+    if (!security_is_valid_name($last_name) || mb_strlen($last_name) > 50) {
         http_response_code(400);
         die(json_encode(['success' => false, 'error' => 'Invalid last name.']));
     }
@@ -55,7 +57,7 @@ if ($payment_method === 'card' || $payment_method === 'ewallet') {
         http_response_code(400);
         die(json_encode(['success' => false, 'error' => 'Invalid postal code. Must be 4 digits.']));
     }
-    if (!preg_match($phone_regex, $phone)) {
+    if (!security_is_valid_phone($phone)) {
         http_response_code(400);
         die(json_encode(['success' => false, 'error' => 'Invalid phone number. Must be 11 digits starting with 09.']));
     }
@@ -64,7 +66,7 @@ if ($payment_method === 'card' || $payment_method === 'ewallet') {
 // Validate ewallet account number
 if ($payment_method === 'ewallet') {
     $ewallet_account = $_POST['ewallet_account'] ?? '';
-    if (!preg_match('/^09\d{9}$/', $ewallet_account)) {
+    if (!security_is_valid_phone($ewallet_account)) {
         http_response_code(400);
         die(json_encode(['success' => false, 'error' => 'Invalid e-wallet phone number. Must be 11 digits starting with 09.']));
     }
@@ -175,19 +177,16 @@ try {
     
 } catch (Exception $e) {
     $conn->rollback();
-    
-    // Error log
-    error_log("Payment processing error: " . $e->getMessage());
-    error_log("Error trace: " . $e->getTraceAsString());
-    
+
+    log_event('CUSTOMER_CHECKOUT_FAILURE', [
+        'user_id' => $user_id,
+        'payment_method' => $payment_method,
+        'exception' => $e->getMessage(),
+    ]);
+
     echo json_encode([
         'success' => false, 
-        'error' => $e->getMessage(),
-        'debug_info' => [
-            'user_id' => $user_id,
-            'payment_method' => $payment_method,
-            'total_amount' => $total_amount ?? 0
-        ]
+        'error' => 'Unable to complete checkout right now. Please review your order and try again.'
     ]);
 }
 ?>

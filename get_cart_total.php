@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/security.php';
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
 
@@ -21,7 +22,8 @@ try {
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
     
-    $subtotal = formatPrice($row['subtotal'], $current_currency) ?? 0;
+    $subtotalValue = isset($row['subtotal']) ? (float) $row['subtotal'] : 0.0;
+    $subtotal = formatPrice($subtotalValue, $current_currency);
     
     echo json_encode([
         'success' => true,
@@ -29,6 +31,11 @@ try {
     ]);
     
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    log_event('CUSTOMER_CART_TOTAL_FAILURE', [
+        'user_id' => $user_id,
+        'exception' => $e->getMessage(),
+    ]);
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Unable to load cart total right now. Please try again.']);
 }
 ?>

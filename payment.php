@@ -374,15 +374,15 @@ $userId = security_require_login('Login.php');
     </div>
 
     <script>
-        const csrfToken = <?php echo json_encode(security_get_csrf_token()); ?>;
+        const csrfToken = <?php echo json_encode(security_get_csrf_token(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
         // Add currency data for JavaScript
-        const currencyData = {
-            currency_code: <?php echo $current_currency['currency_code']; ?>,
-            currency_name: '<?php echo $current_currency['currency_name']; ?>',
-            symbol: '<?php echo $current_currency['symbol']; ?>',
-            price_php: <?php echo $current_currency['price_php']; ?>
-        };
+        const currencyData = <?php echo json_encode([
+            'currency_code' => $current_currency['currency_code'],
+            'currency_name' => $current_currency['currency_name'],
+            'symbol' => $current_currency['symbol'],
+            'price_php' => $current_currency['price_php'],
+        ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
         const paymentMethods = document.querySelectorAll('.payment-method');
         const paymentContents = document.querySelectorAll('.payment-content');

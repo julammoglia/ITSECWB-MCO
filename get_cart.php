@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 include('includes/db.php');
+require_once 'includes/security.php';
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
 
@@ -28,7 +29,8 @@ switch($action) {
         deleteFromCart($conn, $user_id);
         break;
     default:
-        echo json_encode(['error' => 'Invalid action']);
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid action']);
 }
 
 function getCartItems($conn, $user_id) {
@@ -69,11 +71,16 @@ function getCartItems($conn, $user_id) {
 }
 
 function addToCart($conn, $user_id) {
-    $product_code = $_POST['product_code'] ?? 0;
-    $quantity = $_POST['quantity'] ?? 1;
+    $product_code = security_validate_positive_number($_POST['product_code'] ?? null, false);
+    $quantity = security_validate_positive_number($_POST['quantity'] ?? 1, false);
     
-    if (!$product_code) {
-        echo json_encode(['error' => 'Product code required']);
+    if ($product_code === false) {
+        echo json_encode(['success' => false, 'error' => 'Product code required']);
+        return;
+    }
+
+    if ($quantity === false) {
+        echo json_encode(['success' => false, 'error' => 'Enter a valid quantity.']);
         return;
     }
     
@@ -85,13 +92,13 @@ function addToCart($conn, $user_id) {
     $result = $stmt->get_result();
     
     if ($result->num_rows === 0) {
-        echo json_encode(['error' => 'Product not found']);
+        echo json_encode(['success' => false, 'error' => 'Product not found']);
         return;
     }
     
     $product = $result->fetch_assoc();
     if ($product['stock_qty'] < $quantity) {
-        echo json_encode(['error' => 'Not enough stock']);
+        echo json_encode(['success' => false, 'error' => 'Not enough stock']);
         return;
     }
     
@@ -108,7 +115,7 @@ function addToCart($conn, $user_id) {
         $new_qty = $current_qty + $quantity;
         
         if ($new_qty > $product['stock_qty']) {
-            echo json_encode(['error' => 'Not enough stock for requested quantity']);
+            echo json_encode(['success' => false, 'error' => 'Not enough stock for requested quantity']);
             return;
         }
         
@@ -125,16 +132,16 @@ function addToCart($conn, $user_id) {
     if ($stmt->execute()) {
         echo json_encode(['success' => 'Item added to cart']);
     } else {
-        echo json_encode(['error' => 'Failed to add item']);
+        echo json_encode(['success' => false, 'error' => 'Failed to add item']);
     }
 }
 
 function updateCart($conn, $user_id) {
-    $cart_id = $_POST['cart_id'] ?? 0;
-    $quantity = $_POST['quantity'] ?? 1;
+    $cart_id = security_validate_positive_number($_POST['cart_id'] ?? null, false);
+    $quantity = security_validate_positive_number($_POST['quantity'] ?? null, false);
     
-    if (!$cart_id || $quantity < 1) {
-        echo json_encode(['error' => 'Invalid parameters']);
+    if ($cart_id === false || $quantity === false) {
+        echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
         return;
     }
     
@@ -148,13 +155,13 @@ function updateCart($conn, $user_id) {
     $result = $stmt->get_result();
     
     if ($result->num_rows === 0) {
-        echo json_encode(['error' => 'Cart item not found']);
+        echo json_encode(['success' => false, 'error' => 'Cart item not found']);
         return;
     }
     
     $product = $result->fetch_assoc();
     if ($product['stock_qty'] < $quantity) {
-        echo json_encode(['error' => 'Not enough stock']);
+        echo json_encode(['success' => false, 'error' => 'Not enough stock']);
         return;
     }
     
@@ -165,15 +172,15 @@ function updateCart($conn, $user_id) {
     if ($stmt->execute()) {
         echo json_encode(['success' => 'Cart updated']);
     } else {
-        echo json_encode(['error' => 'Failed to update cart']);
+        echo json_encode(['success' => false, 'error' => 'Failed to update cart']);
     }
 }
 
 function deleteFromCart($conn, $user_id) {
-    $cart_id = $_POST['cart_id'] ?? 0;
+    $cart_id = security_validate_positive_number($_POST['cart_id'] ?? null, false);
     
-    if (!$cart_id) {
-        echo json_encode(['error' => 'Cart ID required']);
+    if ($cart_id === false) {
+        echo json_encode(['success' => false, 'error' => 'Cart ID required']);
         return;
     }
     
@@ -184,7 +191,7 @@ function deleteFromCart($conn, $user_id) {
     if ($stmt->execute() && $stmt->affected_rows > 0) {
         echo json_encode(['success' => 'Item removed from cart']);
     } else {
-        echo json_encode(['error' => 'Failed to remove item']);
+        echo json_encode(['success' => false, 'error' => 'Failed to remove item']);
     }
 }
 ?>

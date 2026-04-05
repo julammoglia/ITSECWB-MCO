@@ -4,12 +4,13 @@ security_ensure_session_started();
 security_handle_logout('index.php');
 
 require_once 'includes/db.php'; 
+require_once 'includes/security/input_validation.php';
 include_once('currency_handler.php');
 $current_currency = getCurrencyData($conn);
 $userId = security_require_login('Login.php');
 
 // Fetch user profile
-$stmt = $conn->prepare("SELECT user_id, user_role, first_name, last_name, email, password, profile_picture FROM users WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT user_id, user_role, first_name, last_name, email, phone, password, profile_picture FROM users WHERE user_id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $userResult = $stmt->get_result()->fetch_assoc();
@@ -18,25 +19,35 @@ if (!$userResult) {
     security_logout('Login.php');
 }
 
+$profileAlert = null;
 
 if (isset($_GET['error'])) {
     if ($_GET['error'] === 'unauthorized') {
-        echo "<p class='error-msg'>Only customers can delete their account.</p>";
+        $profileAlert = ['type' => 'error', 'text' => 'Only customers can delete their account.'];
     } elseif ($_GET['error'] === 'notfound') {
-        echo "<p class='error-msg'>User not found.</p>";
+        $profileAlert = ['type' => 'error', 'text' => 'User not found.'];
     } elseif ($_GET['error'] === 'csrf') {
-        echo "<p class='error-msg'>The request could not be verified. Please try again.</p>";
+        $profileAlert = ['type' => 'error', 'text' => 'The request could not be verified. Please try again.'];
     } elseif ($_GET['error'] === 'invalid_name') {
-        echo "<p class='error-msg'>Invalid name. Only letters, spaces, hyphens, apostrophes, and dots are allowed (max 50 characters).</p>";
+        $profileAlert = ['type' => 'error', 'text' => 'Invalid name. Only letters, spaces, hyphens, apostrophes, and dots are allowed.'];
+    } elseif ($_GET['error'] === 'invalid_email') {
+        $profileAlert = ['type' => 'error', 'text' => 'Enter a valid email address.'];
+    } elseif ($_GET['error'] === 'invalid_phone') {
+        $profileAlert = ['type' => 'error', 'text' => 'Enter a valid PH phone number in 09XXXXXXXXX format.'];
+    } elseif ($_GET['error'] === 'email_exists') {
+        $profileAlert = ['type' => 'error', 'text' => 'That email address is already being used by another account.'];
     } elseif ($_GET['error'] === 'filesize') {
-        echo "<p class='error-msg'>Profile picture must be under 2MB.</p>";
+        $profileAlert = ['type' => 'error', 'text' => 'Profile picture must be under 2MB.'];
     } elseif ($_GET['error'] === 'filetype') {
-        echo "<p class='error-msg'>Only JPG, JPEG, and PNG images are allowed.</p>";
+        $profileAlert = ['type' => 'error', 'text' => 'Only JPG, JPEG, and PNG images are allowed.'];
     }
+} elseif (($_GET['profile'] ?? '') === 'updated') {
+    $profileAlert = ['type' => 'success', 'text' => 'Profile updated successfully.'];
 }
 
 // Create full name from first_name and last_name
 $fullName = trim($userResult['first_name'] . ' ' . $userResult['last_name']);
+$displayPhone = security_phone_to_local_format($userResult['phone'] ?? '');
 
 // Fetch user orders with currency information
 $orderQuery = $conn->prepare("
@@ -319,6 +330,22 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         </div>
 
         <div class="form-group">
+          <label for="edit_email">Email</label>
+          <div class="input-wrapper">
+            <div class="input-icon"><i class="fas fa-envelope"></i></div>
+            <input type="email" id="edit_email" name="email" value="<?= htmlspecialchars($userResult['email']) ?>" placeholder="Enter your email" maxlength="45" inputmode="email" autocomplete="email" pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$" title="Enter a valid email address. The email cannot start with a dot." required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_phone">Phone Number</label>
+          <div class="input-wrapper">
+            <div class="input-icon"><i class="fas fa-phone"></i></div>
+            <input type="tel" id="edit_phone" name="phone" value="<?= htmlspecialchars($displayPhone) ?>" placeholder="09XXXXXXXXX" maxlength="11" inputmode="numeric" autocomplete="tel-national" pattern="^09\d{9}$" title="Enter exactly 11 digits starting with 09." required>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label for="profile_picture">Profile Picture <small style="font-weight: 400; color: #9ca3af;">(max 2MB, JPG/JPEG/PNG)</small></label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-camera"></i></div>
@@ -390,7 +417,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         <div class="form-group">
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-key"></i></div>
-            <input type="password" id="new_password" name="new_password" placeholder="Enter your new password" minlength="8" required>
+            <input type="password" id="new_password" name="new_password" placeholder="Enter your new password" minlength="12" required>
             <button type="button" class="toggle-password" onclick="togglePassword('new_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
           </div>
         </div>
@@ -399,7 +426,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
           <label for="confirm_password">Retype New Password</label>
           <div class="input-wrapper">
             <div class="input-icon"><i class="fas fa-key"></i></div>
-            <input type="password" id="confirm_password" name="confirm_password" placeholder="Retype your new password" minlength="8" required>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Retype your new password" minlength="12" required>
             <button type="button" class="toggle-password" onclick="togglePassword('confirm_password', this)" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform: translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280;"><i class="far fa-eye"></i></button>
           </div>
           <small id="passwordMismatch" style="display:none; color:#ef4444; margin-top:0.25rem;">New password and retype do not match.</small>
@@ -458,6 +485,13 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         </div>
         
         <div class="profile-form">
+          <?php if ($profileAlert): ?>
+            <div class="alert alert-<?= htmlspecialchars($profileAlert['type']) ?>" style="margin-bottom: 16px;">
+              <i class="fas <?= $profileAlert['type'] === 'success' ? 'fa-check-circle' : 'fa-times-circle' ?>"></i>
+              <?= htmlspecialchars($profileAlert['text']) ?>
+              <button class="alert-close" onclick="this.parentElement.style.display='none'">&times;</button>
+            </div>
+          <?php endif; ?>
           <div class="form-row">
             <div class="form-group">
               <label for="full_name">Full Name</label>
@@ -470,6 +504,13 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
             <div class="form-group">
               <label for="email">Email</label>
               <input id="email" type="email" value="<?= htmlspecialchars($userResult['email']) ?>" readonly>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input id="phone" type="tel" value="<?= htmlspecialchars($displayPhone) ?>" readonly>
             </div>
           </div>
                     
@@ -680,6 +721,34 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
       newPwd.addEventListener('input', checkMatch);
       confirmPwd.addEventListener('input', checkMatch);
     }
+
+    function sanitizeProfileEmailInput(input) {
+      input.value = input.value.replace(/\s+/g, '').replace(/^\.+/, '');
+    }
+
+    function sanitizeProfileNameInput(input) {
+      input.value = input.value
+        .replace(/[^A-Za-zÀ-ÿ\s\-'.]/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/^\s+/, '');
+    }
+
+    function sanitizeProfilePhoneInput(input) {
+      input.value = input.value.replace(/\D/g, '').slice(0, 11);
+    }
+
+    function bindProfileSanitizer(selector, sanitizer) {
+      document.querySelectorAll(selector).forEach((input) => {
+        input.addEventListener('input', () => sanitizer(input));
+        input.addEventListener('paste', () => {
+          requestAnimationFrame(() => sanitizer(input));
+        });
+      });
+    }
+
+    bindProfileSanitizer('#edit_first_name, #edit_last_name', sanitizeProfileNameInput);
+    bindProfileSanitizer('#edit_email', sanitizeProfileEmailInput);
+    bindProfileSanitizer('#edit_phone', sanitizeProfilePhoneInput);
 
     if (form) {
       form.addEventListener('submit', function(e) {
