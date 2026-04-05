@@ -1,4 +1,6 @@
 <?php
+require_once dirname(__DIR__) . '/security.php';
+
 /**
  * Rate limiting helper function
  *
@@ -108,27 +110,13 @@ function get_client_ip()
  */
 function log_rate_limit_block($ip, $rl_key, $retry_after, $email = null)
 {
-    $projectRoot = dirname(__DIR__, 2);
-    $log_file = $projectRoot . '/logs/rate_limit.log';
-    $log_dir = dirname($log_file);
-
-    if (!is_dir($log_dir)) {
-        @mkdir($log_dir, 0755, true);
-    }
-
-    $timestamp = date('Y-m-d H:i:s');
     $email_hash = $email ? hash('sha256', strtolower(trim($email))) : 'N/A';
 
-    $log_entry = sprintf(
-        "[%s] IP: %s | Key: %s | Retry-After: %d | Email-Hash: %s\n",
-        $timestamp,
-        $ip,
-        $rl_key,
-        $retry_after,
-        $email_hash
-    );
-
-    @file_put_contents($log_file, $log_entry, FILE_APPEND);
+    security_log_audit('AUTH', 'FAILED', 'rate_limited', [
+        'key' => $rl_key,
+        'retry_after' => $retry_after,
+        'email_hash' => $email_hash,
+    ], $email ?: null);
 }
 
 /**

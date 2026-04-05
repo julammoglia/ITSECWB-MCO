@@ -6,6 +6,7 @@ include "includes/db.php";
 include "includes/security/rate_limit.php";
 require_once "includes/security/input_validation.php";
 require_once "includes/security/password_policy.php";
+require_once "includes/security.php";
 
 // Load Cloudflare Turnstile Configuration from environment
 $turnstile_secret_key = EnvLoader::get('TURNSTILE_SECRET_KEY');
@@ -148,6 +149,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
                             $role_message = 'Welcome Customer! Redirecting to homepage...';
                             break;
                     }
+
+                    security_log_audit('AUTH', 'SUCCESS', 'login', [
+                        'role' => $user_role,
+                    ], trim($first_name . ' ' . $last_name) ?: $email);
+
                     echo "<script>
                         alert('$role_message');
                         window.location.href = '$redirect_page';
@@ -163,6 +169,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
             }
             $stmt->close();
         }
+    }
+
+    if (!empty($login_error)) {
+        security_log_audit('AUTH', 'FAILED', 'login', [
+            'reason' => $login_error,
+        ], $email !== '' ? $email : null);
     }
 }
 
@@ -272,6 +284,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
                             }
                         }
 
+                        security_log_audit('AUTH', 'SUCCESS', 'register', [
+                            'role' => 'Customer',
+                            'user_id' => $newUserId,
+                            'email' => $email,
+                        ], $email);
+
                         $register_success = "Account created successfully! You can now sign in with your credentials.";
                         $_SESSION['register_attempts'] = 0;
                         $_POST = array();
@@ -285,6 +303,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
                 } // end password policy check
             }
         }
+    }
+
+    if (!empty($register_error)) {
+        $registerLogEmail = isset($email) && $email !== ''
+            ? $email
+            : security_normalize_email($_POST['regEmail'] ?? '');
+
+        security_log_audit('AUTH', 'FAILED', 'register', [
+            'reason' => $register_error,
+            'email' => $registerLogEmail,
+        ], $registerLogEmail !== '' ? $registerLogEmail : null);
     }
 }
 

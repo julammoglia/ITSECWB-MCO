@@ -226,6 +226,14 @@ try {
     $stmt->execute();
     
     $conn->commit();
+
+    security_log_audit('TRANSACTION', 'SUCCESS', 'checkout', [
+        'user_id' => $user_id,
+        'order_id' => $order_id,
+        'payment_method' => $payment_method,
+        'payment_status' => $payment_status,
+        'total_amount' => number_format($total_amount, 2, '.', ''),
+    ], $user_id);
     
     echo json_encode([
         'success' => true, 
@@ -237,11 +245,11 @@ try {
 } catch (Exception $e) {
     $conn->rollback();
 
-    log_event('CUSTOMER_CHECKOUT_FAILURE', [
+    security_log_audit('TRANSACTION', 'FAILED', 'checkout', [
         'user_id' => $user_id,
         'payment_method' => $payment_method,
-        'exception' => $e->getMessage(),
-    ]);
+        'reason' => $e->getMessage(),
+    ], $user_id);
 
     echo json_encode([
         'success' => false, 

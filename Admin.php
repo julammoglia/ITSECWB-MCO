@@ -53,6 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         switch ($action) {
+            case 'export_logs':
+                security_log_audit('ADMIN', 'SUCCESS', 'export_logs', [
+                    'format' => 'csv',
+                ], $userId);
+                security_stream_audit_log_csv('security-log-' . date('Ymd-His') . '.csv');
+                break;
+
             case 'add_product':
                 $validation = security_admin_validate_product_payload($conn, $_POST);
 
@@ -82,6 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $srpPhp
                 );
                 if ($stmt->execute()) {
+                    security_log_audit('ADMIN', 'SUCCESS', 'add_product', [
+                        'product_name' => $productName,
+                        'category_code' => $categoryCode,
+                        'stock_qty' => $stockQty,
+                        'price_php' => number_format($srpPhp, 2, '.', ''),
+                    ], $userId);
                     $success = "Product added successfully! Inventory trigger logged the new stock.";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
@@ -112,6 +125,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("CALL delete_product(?)");
                 $stmt->bind_param("i", $productId);
                 if ($stmt->execute()) {
+                    security_log_audit('ADMIN', 'SUCCESS', 'delete_product', [
+                        'product_id' => $productId,
+                    ], $userId);
                     $success = "Product deleted successfully! Delete product trigger logged the deleted product.";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
@@ -147,6 +163,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 try {
                     if ($stmt->execute()) {
+                        security_log_audit('ADMIN', 'SUCCESS', 'update_stock', [
+                            'product_code' => $productCode,
+                            'new_stock' => $newStock,
+                        ], $userId);
                         $success = "Stock updated successfully! Inventory adjustment trigger logged the change.";
                     } else {
                         log_event('ADMIN_ACTION_FAILURE', [
@@ -198,6 +218,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $role
                 );
                 if ($stmt->execute()) {
+                    security_log_audit('ADMIN', 'SUCCESS', 'add_staff', [
+                        'created_user_role' => $role,
+                        'email' => $email,
+                        'phone' => $phone,
+                    ], $userId);
                     $success = "Staff member added successfully!";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
@@ -231,6 +256,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("CALL update_order_status(?, ?)");
                 $stmt->bind_param("is", $orderId, $newStatus);
                 if ($stmt->execute()) {
+                    security_log_audit('ADMIN', 'SUCCESS', 'update_order_status', [
+                        'order_id' => $orderId,
+                        'new_status' => $newStatus,
+                    ], $userId);
                     echo json_encode(['success' => true, 'message' => 'Order status updated! Status change trigger logged the update.']);
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
@@ -264,6 +293,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ? AND user_role IN ('Staff', 'Admin')");
                 $stmt->bind_param("i", $targetUserId);
                 if ($stmt->execute()) {
+                    security_log_audit('ADMIN', 'SUCCESS', 'delete_staff', [
+                        'target_user_id' => $targetUserId,
+                    ], $userId);
                     $success = "Staff member deleted successfully!";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
@@ -295,6 +327,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("CALL delete_customer_account(?)");
                 $stmt->bind_param("i", $customerId);
                 if ($stmt->execute()) {
+                    security_log_audit('ADMIN', 'SUCCESS', 'delete_customer', [
+                        'customer_id' => $customerId,
+                    ], $userId);
                     $success = "Customer account deleted successfully! Deletion trigger logged the action.";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
@@ -422,12 +457,21 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
         <p class="admin-header-status">Logged in as <strong><?= htmlspecialchars($adminDisplayName) ?></strong></p>
       </div>
     </div>
-    <form method="POST" style="display: inline;">
-      <?php echo security_csrf_input(); ?>
-      <button type="submit" name="logout" value="1" class="logout-btn" onclick="return confirmLogout()">
-        Logout
-      </button>
-    </form>
+    <div class="header-actions">
+      <form method="POST" class="header-action-form">
+        <?php echo security_csrf_input(); ?>
+        <input type="hidden" name="action" value="export_logs">
+        <button type="submit" class="yellow-btn header-action-btn">
+          <i class="fas fa-file-export"></i> Export Security Logs
+        </button>
+      </form>
+      <form method="POST" class="header-action-form">
+        <?php echo security_csrf_input(); ?>
+        <button type="submit" name="logout" value="1" class="logout-btn header-action-btn" onclick="return confirmLogout()">
+          Logout
+        </button>
+      </form>
+    </div>
   </div>
 
   <div class="tabs">

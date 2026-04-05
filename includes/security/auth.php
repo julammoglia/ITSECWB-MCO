@@ -98,6 +98,7 @@ if (!function_exists('security_add_query_param')) {
 }
 
 require_once __DIR__ . '/csrf.php';
+require_once dirname(__DIR__) . '/security.php';
 
 if (!function_exists('security_prevent_cache')) {
     function security_prevent_cache(): void
@@ -160,6 +161,10 @@ if (!function_exists('security_bootstrap_authenticated_session')) {
         $absoluteExpired = ($now - $authenticatedAt) > SECURITY_ABSOLUTE_TIMEOUT;
 
         if ($idleExpired || $absoluteExpired) {
+            security_log_audit('AUTH', 'FAILED', 'session_expired', [
+                'reason' => $idleExpired ? 'idle_timeout' : 'absolute_timeout',
+                'user_role' => $_SESSION['user_role'] ?? null,
+            ]);
             security_mark_session_expired();
             security_destroy_session();
             return;
@@ -203,6 +208,9 @@ if (!function_exists('security_logout')) {
     function security_logout(string $redirect = 'Login.php'): void
     {
         security_prevent_cache();
+        security_log_audit('AUTH', 'SUCCESS', 'logout', [
+            'reason' => 'user_requested',
+        ]);
         security_destroy_session();
         security_redirect($redirect);
     }
