@@ -30,12 +30,54 @@
     .user-info {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       gap: 16px;
       margin-top: 16px;
       margin-bottom: 32px;
       font-size: 14px;
       color: #6b7280;
+    }
+
+    .user-info-title {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .admin-header-presence {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+    }
+
+    .admin-header-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      object-fit: cover;
+      border: 2px solid #dbeafe;
+      background: #eff6ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1d4ed8;
+      font-size: 15px;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .admin-header-status {
+      margin: 0;
+      color: #475569;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .admin-header-status strong {
+      color: #0f172a;
+      font-size: 18px;
+      font-weight: 700;
     }
 
     .logout-btn {
@@ -150,6 +192,23 @@
       flex: 0 0 auto;
       min-width: 160px;
       justify-content: space-between;
+    }
+
+    .staff-form-grid {
+      display: grid !important;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+
+    .staff-form-grid > * {
+      min-width: 0 !important;
+    }
+
+    .staff-form-grid .staff-submit-btn {
+      min-width: 0;
+      width: 100%;
+      justify-content: center;
     }
 
     .form-grid input,
@@ -452,14 +511,23 @@
       .form-grid.single-row button {
         min-width: auto;
       }
+
+      .staff-form-grid {
+        grid-template-columns: 1fr !important;
+      }
       
       .user-info {
         flex-direction: column;
         gap: 8px;
+        align-items: flex-start;
       }
       
       .content-box {
         padding: 16px;
+      }
+
+      .admin-header-presence {
+        align-items: flex-start;
       }
       
       table th,

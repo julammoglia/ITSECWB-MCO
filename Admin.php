@@ -3,6 +3,7 @@ require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
 require_once 'includes/security.php';
+require_once 'includes/security/admin.php';
 require_once 'includes/security/password_policy.php';
 
 // Handle logout
@@ -11,176 +12,315 @@ security_handle_logout('Index.php');
 $isOrderStatusRequest = $_SERVER['REQUEST_METHOD'] === 'POST'
     && (($_POST['action'] ?? '') === 'update_order_status');
 
-$userId = $isOrderStatusRequest
-    ? security_require_role_api($conn, 'Admin')
-    : security_require_role($conn, 'Admin', 'Login.php', 'Index.php');
+if ($isOrderStatusRequest) {
+    header('Content-Type: application/json');
+}
+
+$userId = security_require_admin_access($conn, $isOrderStatusRequest);
+
+$adminProfileStmt = $conn->prepare("
+    SELECT first_name, last_name, email, profile_picture
+    FROM users
+    WHERE user_id = ? AND user_role = 'Admin'
+");
+$adminProfileStmt->bind_param("i", $userId);
+$adminProfileStmt->execute();
+$adminProfileResult = $adminProfileStmt->get_result();
+$adminProfile = $adminProfileResult->fetch_assoc() ?: [
+    'first_name' => $_SESSION['first_name'] ?? 'Admin',
+    'last_name' => $_SESSION['last_name'] ?? '',
+    'email' => $_SESSION['email'] ?? '',
+    'profile_picture' => null,
+];
+$adminProfileStmt->close();
+
+$adminDisplayName = trim(($adminProfile['first_name'] ?? '') . ' ' . ($adminProfile['last_name'] ?? ''));
+if ($adminDisplayName === '') {
+    $adminDisplayName = 'Admin User';
+}
+
+$adminInitials = strtoupper(substr((string) ($adminProfile['first_name'] ?? 'A'), 0, 1) . substr((string) ($adminProfile['last_name'] ?? 'D'), 0, 1));
 
 // Form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
-        if ($_POST['action'] === 'update_order_status') {
-            header('Content-Type: application/json');
+        $action = $_POST['action'];
+
+        if ($action === 'update_order_status') {
             security_require_csrf_api();
         } else {
             security_require_csrf('Admin.php');
         }
 
-        switch ($_POST['action']) {
+        switch ($action) {
             case 'add_product':
-                $productName = security_sanitize_limited_string($_POST['product_name'] ?? null, 255);
-                $stockQty = security_validate_positive_number($_POST['stock_qty'] ?? null, false);
-                $srpPhp = security_validate_positive_number($_POST['srp_php'] ?? null, true);
+                $validation = security_admin_validate_product_payload($conn, $_POST);
 
-                if ($productName === false || $stockQty === false || $srpPhp === false) {
+                if (!$validation['valid']) {
                     log_event('VALIDATION_FAILURE', [
                         'action' => 'add_product',
-                        'fields' => [
-                            'product_name' => $productName !== false,
-                            'stock_qty' => $stockQty !== false,
-                            'srp_php' => $srpPhp !== false,
-                        ],
+                        'reason' => $validation['error'],
                         'user_id' => $userId,
                     ]);
-                    security_redirect(security_add_query_param('Admin.php', 'error', 'invalid_input'));
+                    $error = $validation['error'];
+                    break;
                 }
+
+                $productName = $validation['data']['product_name'];
+                $categoryCode = $validation['data']['category_code'];
+                $description = $validation['data']['description'];
+                $stockQty = $validation['data']['stock_qty'];
+                $srpPhp = $validation['data']['srp_php'];
 
                 // Use add_new_product stored procedure
                 $stmt = $conn->prepare("CALL add_new_product(?, ?, ?, ?, ?)");
                 $stmt->bind_param("sisid", 
                     $productName, 
-                    $_POST['category_code'], 
-                    $_POST['description'], 
+                    $categoryCode, 
+                    $description, 
                     $stockQty, 
                     $srpPhp
                 );
                 if ($stmt->execute()) {
                     $success = "Product added successfully! Inventory trigger logged the new stock.";
                 } else {
-                    $error = "Error adding product: " . $conn->error;
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'add_product',
+                        'user_id' => $userId,
+                        'db_error' => $conn->error,
+                    ]);
+                    $error = "Unable to add the product right now. Please try again.";
                 }
                 $stmt->close();
                 break;
-            
+             
             case 'delete_product':
+                $validation = security_admin_validate_delete_product_payload($conn, $_POST);
+                if (!$validation['valid']) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'delete_product',
+                        'reason' => $validation['error'],
+                        'user_id' => $userId,
+                    ]);
+                    $error = $validation['error'];
+                    break;
+                }
+
+                $productId = $validation['data']['product_id'];
+
                 // Use delete_product stored procedure
                 $stmt = $conn->prepare("CALL delete_product(?)");
-                $stmt->bind_param("i", $_POST['product_id']);
+                $stmt->bind_param("i", $productId);
                 if ($stmt->execute()) {
                     $success = "Product deleted successfully! Delete product trigger logged the deleted product.";
                 } else {
-                    $error = "Error deleting product: " . $conn->error;
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'delete_product',
+                        'user_id' => $userId,
+                        'product_id' => $productId,
+                        'db_error' => $conn->error,
+                    ]);
+                    $error = "Unable to delete the product right now. Please try again.";
                 }
                 $stmt->close();
                 break;
 
             case 'update_stock':
-              $productCode = security_validate_positive_number($_POST['product_code'] ?? null, false);
-              $newStock = security_validate_non_negative_integer($_POST['new_stock'] ?? null);
+                $validation = security_admin_validate_stock_payload($conn, $_POST);
 
-              if ($productCode === false || $newStock === false) {
-                  log_event('VALIDATION_FAILURE', [
-                      'action' => 'update_stock',
-                      'fields' => [
-                          'product_code' => $productCode !== false,
-                          'new_stock' => $newStock !== false,
-                      ],
-                      'user_id' => $userId,
-                  ]);
-                  security_redirect(security_add_query_param('Admin.php', 'error', 'invalid_stock_input'));
-              }
+                if (!$validation['valid']) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'update_stock',
+                        'reason' => $validation['error'],
+                        'user_id' => $userId,
+                    ]);
+                    $error = $validation['error'];
+                    break;
+                }
 
-              // Use update_product_stock stored procedure
-              $stmt = $conn->prepare("CALL update_product_stock(?, ?)");
-              $stmt->bind_param("ii", $productCode, $newStock);
-              
-              try {
-                  if ($stmt->execute()) {
-                      $success = "Stock updated successfully! Inventory adjustment trigger logged the change.";
-                  } else {
-                      $error = "Error updating stock: " . $conn->error;
-                  }
-              } catch (Exception $e) {
-                  $error = "Error. Invalid stock quantity.";
-              }
-              $stmt->close();
-              break;
+                $productCode = $validation['data']['product_code'];
+                $newStock = $validation['data']['new_stock'];
+
+                // Use update_product_stock stored procedure
+                $stmt = $conn->prepare("CALL update_product_stock(?, ?)");
+                $stmt->bind_param("ii", $productCode, $newStock);
+                
+                try {
+                    if ($stmt->execute()) {
+                        $success = "Stock updated successfully! Inventory adjustment trigger logged the change.";
+                    } else {
+                        log_event('ADMIN_ACTION_FAILURE', [
+                            'action' => 'update_stock',
+                            'user_id' => $userId,
+                            'product_code' => $productCode,
+                            'db_error' => $conn->error,
+                        ]);
+                        $error = "Unable to update stock right now. Please try again.";
+                    }
+                } catch (Exception $e) {
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'update_stock',
+                        'user_id' => $userId,
+                        'product_code' => $productCode,
+                        'exception' => $e->getMessage(),
+                    ]);
+                    $error = "Unable to update stock right now. Please review the quantity and try again.";
+                }
+                $stmt->close();
+                break;
 
             case 'add_staff':
-                $first = trim($_POST['first_name'] ?? '');
-                $last = trim($_POST['last_name'] ?? '');
-                $email = trim($_POST['email'] ?? '');
-                $rawPassword = $_POST['password'] ?? '';
-                $role = $_POST['user_role'] ?? '';
-
-                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $error = "Invalid email address.";
+                $validation = security_admin_validate_staff_payload($conn, $_POST);
+                if (!$validation['valid']) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'add_staff',
+                        'reason' => $validation['error'],
+                        'user_id' => $userId,
+                    ]);
+                    $error = $validation['error'];
                     break;
                 }
 
-                if (!in_array($role, ['Staff', 'Admin'])) {
-                    $error = "Invalid role selected.";
-                    break;
-                }
+                $first = $validation['data']['first_name'];
+                $last = $validation['data']['last_name'];
+                $email = $validation['data']['email'];
+                $phone = $validation['data']['phone'];
+                $hashedPassword = $validation['data']['password_hash'];
+                $role = $validation['data']['user_role'];
 
-                $policyResult = validate_password_policy($rawPassword);
-                if (!$policyResult['valid']) {
-                    $error = "Password does not meet requirements: " . implode(' ', $policyResult['errors']);
-                    break;
-                }
-
-                $hashedPassword = security_hash_password($rawPassword);
-
-                $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_role) VALUES (?, ?, ?, ?, ?)");
-                $stmt->bind_param("sssss", 
+                $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, phone, password, user_role) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssssss", 
                     $first,
                     $last,
                     $email,
+                    $phone,
                     $hashedPassword,
                     $role
                 );
                 if ($stmt->execute()) {
                     $success = "Staff member added successfully!";
                 } else {
-                    $error = "Error adding staff: " . $conn->error;
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'add_staff',
+                        'user_id' => $userId,
+                        'email' => hash('sha256', $email),
+                        'db_error' => $conn->error,
+                    ]);
+                    $error = "Unable to add the account right now. Please try again.";
                 }
                 $stmt->close();
                 break;
 
             case 'update_order_status':
+                $validation = security_admin_validate_order_status_payload($conn, $_POST);
+                if (!$validation['valid']) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'update_order_status',
+                        'reason' => $validation['error'],
+                        'user_id' => $userId,
+                    ]);
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'message' => $validation['error']]);
+                    exit;
+                }
+
+                $orderId = $validation['data']['order_id'];
+                $newStatus = $validation['data']['new_status'];
+
                 // Use update_order_status stored procedure
                 $stmt = $conn->prepare("CALL update_order_status(?, ?)");
-                $stmt->bind_param("is", $_POST['order_id'], $_POST['new_status']);
+                $stmt->bind_param("is", $orderId, $newStatus);
                 if ($stmt->execute()) {
                     echo json_encode(['success' => true, 'message' => 'Order status updated! Status change trigger logged the update.']);
                 } else {
-                    echo json_encode(['success' => false, 'message' => $conn->error]);
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'update_order_status',
+                        'user_id' => $userId,
+                        'order_id' => $orderId,
+                        'db_error' => $conn->error,
+                    ]);
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Unable to update the order status right now.']);
                 }
                 $stmt->close();
                 exit;
                 break;
 
             case 'delete_staff':
+                $validation = security_admin_validate_delete_staff_payload($conn, $_POST, $userId);
+                if (!$validation['valid']) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'delete_staff',
+                        'reason' => $validation['error'],
+                        'user_id' => $userId,
+                    ]);
+                    $error = $validation['error'];
+                    break;
+                }
+
+                $targetUserId = $validation['data']['user_id'];
+
                 // Delete staff (will trigger customer_deletion_log_trigger if customer)
                 $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ? AND user_role IN ('Staff', 'Admin')");
-                $stmt->bind_param("i", $_POST['user_id']);
+                $stmt->bind_param("i", $targetUserId);
                 if ($stmt->execute()) {
                     $success = "Staff member deleted successfully!";
                 } else {
-                    $error = "Error deleting staff: " . $conn->error;
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'delete_staff',
+                        'user_id' => $userId,
+                        'target_user_id' => $targetUserId,
+                        'db_error' => $conn->error,
+                    ]);
+                    $error = "Unable to delete the account right now. Please try again.";
                 }
                 $stmt->close();
                 break;
 
             case 'delete_customer':
+                $validation = security_admin_validate_delete_customer_payload($conn, $_POST);
+                if (!$validation['valid']) {
+                    log_event('VALIDATION_FAILURE', [
+                        'action' => 'delete_customer',
+                        'reason' => $validation['error'],
+                        'user_id' => $userId,
+                    ]);
+                    $error = $validation['error'];
+                    break;
+                }
+
+                $customerId = $validation['data']['customer_id'];
+
                 // Use delete_customer_account stored procedure
                 $stmt = $conn->prepare("CALL delete_customer_account(?)");
-                $stmt->bind_param("i", $_POST['customer_id']);
+                $stmt->bind_param("i", $customerId);
                 if ($stmt->execute()) {
                     $success = "Customer account deleted successfully! Deletion trigger logged the action.";
                 } else {
-                    $error = "Error deleting customer: " . $conn->error;
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'delete_customer',
+                        'user_id' => $userId,
+                        'customer_id' => $customerId,
+                        'db_error' => $conn->error,
+                    ]);
+                    $error = "Unable to delete the customer account right now. Please try again.";
                 }
                 $stmt->close();
+                break;
+
+            default:
+                log_event('UNEXPECTED_ADMIN_ACTION', [
+                    'action' => $action,
+                    'user_id' => $userId,
+                ]);
+
+                if ($isOrderStatusRequest) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'Invalid admin action.']);
+                    exit;
+                }
+
+                $error = "Invalid admin action.";
                 break;
         }
     }
@@ -269,7 +409,19 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
 <body>
 <div class="container">
   <div class="user-info">
-  <h2>Admin Dashboard</h2>
+    <div class="user-info-title">
+      <h2>Admin Dashboard</h2>
+      <div class="admin-header-presence">
+        <?php if (!empty($adminProfile['profile_picture'])): ?>
+          <img
+            src="uploads/profile_pictures/<?= htmlspecialchars($adminProfile['profile_picture']) ?>"
+            alt="<?= htmlspecialchars($adminDisplayName) ?>"
+            class="admin-header-avatar"
+          >
+        <?php endif; ?>
+        <p class="admin-header-status">Logged in as <strong><?= htmlspecialchars($adminDisplayName) ?></strong></p>
+      </div>
+    </div>
     <form method="POST" style="display: inline;">
       <?php echo security_csrf_input(); ?>
       <button type="submit" name="logout" value="1" class="logout-btn" onclick="return confirmLogout()">
@@ -305,7 +457,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <form method="POST" class="form-grid single-row">
       <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="add_product">
-      <input name="product_name" placeholder="Product Name" maxlength="255" required>
+      <input name="product_name" placeholder="Product Name" maxlength="45" required>
       
       <select name="category_code" required>
         <option value="">Select Category</option>
@@ -319,7 +471,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
       
       <input name="srp_php" type="number" step="0.01" min="0.01" placeholder="Price (PHP)" inputmode="decimal" required>
       <input name="stock_qty" type="number" min="1" step="1" placeholder="Stock Quantity" inputmode="numeric" required>
-      <input name="description" placeholder="Product Description" maxlength="45"></input>
+      <input name="description" placeholder="Product Description" maxlength="45">
       <button type="submit" class="yellow-btn">Add Product</button>
     </form>
     </div>
@@ -357,7 +509,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
               </form>
               <i class="fas fa-trash-alt delete-icon" 
                  title="Delete" 
-                 onclick="deleteProduct(<?= $p['product_code'] ?>, '<?= htmlspecialchars($p['product_name']) ?>')" 
+                 onclick='deleteProduct(<?= (int) $p["product_code"] ?>, <?= json_encode($p["product_name"], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' 
                  style="cursor: pointer; color: #991b1b">
               </i>
             </td>
@@ -440,18 +592,19 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
   <div id="staffusers" class="tab-content">
     <div class="content-box">
     <h3><i class="fas fa-user-plus"></i> Add New Staff</h3>
-    <form method="POST" class="form-grid single-row">
+    <form method="POST" class="form-grid single-row staff-form-grid">
       <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="add_staff">
-      <input name="first_name" placeholder="First Name" required>
-      <input name="last_name" placeholder="Last Name" required>
-      <input name="email" type="email" placeholder="Email" required>
+      <input name="first_name" placeholder="First Name" maxlength="45" pattern="^[A-Za-z]+(?:[ .'-][A-Za-z]+)*$" title="Use letters only, with optional spaces, dots, apostrophes, or hyphens between words." autocomplete="given-name" required>
+      <input name="last_name" placeholder="Last Name" maxlength="45" pattern="^[A-Za-z]+(?:[ .'-][A-Za-z]+)*$" title="Use letters only, with optional spaces, dots, apostrophes, or hyphens between words." autocomplete="family-name" required>
+      <input name="email" type="email" placeholder="Email" maxlength="45" inputmode="email" autocomplete="email" pattern="^[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$" title="Enter a valid email address. The email cannot start with a dot." required>
+      <input name="phone" type="tel" placeholder="09XXXXXXXXX" inputmode="numeric" autocomplete="tel-national" pattern="^09\d{9}$" title="Enter exactly 11 digits starting with 09." maxlength="11" required>
       <input name="password" type="password" placeholder="Password (min 12 chars)" required minlength="12" title="At least 12 characters with 3 of 4: uppercase, lowercase, numbers, special characters. No spaces.">
-      <select name="user_role">
+      <select name="user_role" required>
         <option value="Staff">Staff</option>
         <option value="Admin">Admin</option>
       </select>
-      <button type="submit" class="yellow-btn">Add Staff Member</button>
+      <button type="submit" class="yellow-btn staff-submit-btn">Add Staff Member</button>
     </form>
     </div>
 
@@ -477,7 +630,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
               </form>
               <i class="fas fa-trash-alt delete-icon" 
                  title="Delete" 
-                 onclick="deleteStaff(<?= $s['user_id'] ?>, '<?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?>')" 
+                 onclick='deleteStaff(<?= (int) $s["user_id"] ?>, <?= json_encode($s["first_name"] . " " . $s["last_name"], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' 
                  style="cursor: pointer; color: #991b1b">
               </i>
             </td>
@@ -564,9 +717,8 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
   </div>
 </div>
 
-
 <script>
-const csrfToken = <?php echo json_encode(security_get_csrf_token()); ?>;
+const csrfToken = <?php echo json_encode(security_get_csrf_token(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 function deleteProduct(productCode, productName) {
   if (confirm(`Delete product: ${productName}? This will remove it from all carts, favorites, and order history.`)) {
@@ -615,7 +767,7 @@ function updateOrderStatus(orderId, newStatus) {
 }
 
 function viewOrderDetails(orderId) {
-    const orders = <?php echo json_encode($orderDetails); ?>;
+    const orders = <?php echo json_encode($orderDetails, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
     const order = orders[orderId];
     
     if (order) {
@@ -698,6 +850,42 @@ document.querySelectorAll('input[name="new_stock"]').forEach((input) => {
 
   input.addEventListener('input', () => {
     input.value = input.value.replace(/[^\d]/g, '');
+  });
+});
+
+function sanitizeAdminEmailInput(input) {
+  input.value = input.value.replace(/\s+/g, '').replace(/^\.+/, '');
+}
+
+function sanitizeAdminNameInput(input) {
+  input.value = input.value
+    .replace(/[^A-Za-z .'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s+/, '');
+}
+
+function sanitizeAdminPhoneInput(input) {
+  input.value = input.value.replace(/\D/g, '').slice(0, 11);
+}
+
+document.querySelectorAll('input[name="first_name"], input[name="last_name"]').forEach((input) => {
+  input.addEventListener('input', () => sanitizeAdminNameInput(input));
+  input.addEventListener('paste', () => {
+    requestAnimationFrame(() => sanitizeAdminNameInput(input));
+  });
+});
+
+document.querySelectorAll('input[name="email"]').forEach((input) => {
+  input.addEventListener('input', () => sanitizeAdminEmailInput(input));
+  input.addEventListener('paste', () => {
+    requestAnimationFrame(() => sanitizeAdminEmailInput(input));
+  });
+});
+
+document.querySelectorAll('input[name="phone"]').forEach((input) => {
+  input.addEventListener('input', () => sanitizeAdminPhoneInput(input));
+  input.addEventListener('paste', () => {
+    requestAnimationFrame(() => sanitizeAdminPhoneInput(input));
   });
 });
 </script>
