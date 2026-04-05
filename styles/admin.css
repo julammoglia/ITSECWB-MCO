@@ -65,6 +65,29 @@
       min-width: 160px;
     }
 
+    .debug-toggle-btn {
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #334155;
+    }
+
+    .debug-toggle-btn.is-enabled {
+      border-color: #f59e0b;
+      background: #fffbeb;
+      color: #b45309;
+    }
+
+    .debug-toggle-btn.is-disabled {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: #475569;
+    }
+
+    .debug-toggle-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    }
+
     .admin-header-presence {
       display: inline-flex;
       align-items: center;
@@ -239,7 +262,7 @@
     }
 
     /* Button Styling */
-    .yellow-btn, .red-btn, .secondary-btn, .logout-btn {
+    .yellow-btn, .red-btn, .secondary-btn, .logout-btn, .debug-toggle-btn {
       padding: 12px 24px;
       border: none;
       border-radius: 8px;
@@ -466,6 +489,14 @@
       margin-bottom: 24px;
       font-weight: 500;
       border: 1px solid;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .alert.is-hiding {
+      opacity: 0;
+      transform: translateY(-8px);
     }
 
     .alert-success {

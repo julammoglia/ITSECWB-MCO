@@ -270,6 +270,13 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
       gap: 8px;
       position: relative;
       font-size: 0.95rem;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .alert.is-hiding {
+      opacity: 0;
+      transform: translateY(-8px);
     }
     .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
     .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
@@ -395,10 +402,10 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         ];
         $msg = $messages[$pwd] ?? null;
         if ($msg): ?>
-          <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>">
+          <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>" data-auto-dismiss="5000">
             <i class="fas <?= $msg['type']==='success' ? 'fa-check-circle' : ($msg['type']==='warning' ? 'fa-exclamation-triangle' : 'fa-times-circle') ?>"></i>
             <?= htmlspecialchars($msg['text']) ?>
-            <button class="alert-close" onclick="this.parentElement.style.display='none'">&times;</button>
+            <button class="alert-close" onclick="dismissAlert(this.parentElement)">&times;</button>
           </div>
       <?php endif; endif; ?>
       <form id="changePasswordForm" action="edit_profile.php" method="post">
@@ -486,10 +493,10 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         
         <div class="profile-form">
           <?php if ($profileAlert): ?>
-            <div class="alert alert-<?= htmlspecialchars($profileAlert['type']) ?>" style="margin-bottom: 16px;">
+            <div class="alert alert-<?= htmlspecialchars($profileAlert['type']) ?>" style="margin-bottom: 16px;" data-auto-dismiss="5000">
               <i class="fas <?= $profileAlert['type'] === 'success' ? 'fa-check-circle' : 'fa-times-circle' ?>"></i>
               <?= htmlspecialchars($profileAlert['text']) ?>
-              <button class="alert-close" onclick="this.parentElement.style.display='none'">&times;</button>
+              <button class="alert-close" onclick="dismissAlert(this.parentElement)">&times;</button>
             </div>
           <?php endif; ?>
           <div class="form-row">
@@ -697,6 +704,18 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
         icon.classList.add('fa-eye');
       }
     }
+
+    function dismissAlert(element) {
+      if (!element) return;
+      element.classList.add('is-hiding');
+      window.setTimeout(() => element.remove(), 350);
+    }
+
+    document.querySelectorAll('.alert[data-auto-dismiss]').forEach((alert) => {
+      const delay = parseInt(alert.dataset.autoDismiss || '5000', 10);
+
+      window.setTimeout(() => dismissAlert(alert), delay);
+    });
 
     // Client-side validation for matching passwords
     const newPwd = document.getElementById('new_password');

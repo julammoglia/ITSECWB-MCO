@@ -4,6 +4,10 @@ if (!defined('SECURITY_APP_TIMEZONE')) {
     define('SECURITY_APP_TIMEZONE', 'Asia/Manila');
 }
 
+if (!defined('SECURITY_GENERIC_ERROR_MESSAGE')) {
+    define('SECURITY_GENERIC_ERROR_MESSAGE', 'Something went wrong. Please try again later.');
+}
+
 if (!function_exists('security_apply_timezone')) {
     function security_apply_timezone(): void
     {
@@ -14,6 +18,424 @@ if (!function_exists('security_apply_timezone')) {
 }
 
 security_apply_timezone();
+
+if (!function_exists('security_get_project_root')) {
+    function security_get_project_root(): string
+    {
+        return dirname(__DIR__);
+    }
+}
+
+if (!function_exists('security_get_config_directory')) {
+    function security_get_config_directory(): string
+    {
+        return security_get_project_root() . '/config';
+    }
+}
+
+if (!function_exists('security_get_debug_state_file_path')) {
+    function security_get_debug_state_file_path(): string
+    {
+        return security_get_config_directory() . '/debug_mode.json';
+    }
+}
+
+if (!function_exists('security_get_error_log_file_path')) {
+    function security_get_error_log_file_path(): string
+    {
+        return security_get_log_directory() . '/error.log';
+    }
+}
+
+if (!function_exists('security_ensure_directory')) {
+    function security_ensure_directory(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            mkdir($directory, 0775, true);
+        }
+    }
+}
+
+if (!function_exists('security_is_debug_mode')) {
+    function security_is_debug_mode(): bool
+    {
+        if (array_key_exists('security_debug_mode_cache', $GLOBALS)) {
+            return (bool) $GLOBALS['security_debug_mode_cache'];
+        }
+
+        $debugFile = security_get_debug_state_file_path();
+        if (!is_file($debugFile)) {
+            $GLOBALS['security_debug_mode_cache'] = false;
+            return false;
+        }
+
+        $contents = file_get_contents($debugFile);
+        if ($contents === false) {
+            $GLOBALS['security_debug_mode_cache'] = false;
+            return false;
+        }
+
+        $decoded = json_decode($contents, true);
+        $GLOBALS['security_debug_mode_cache'] = is_array($decoded) && !empty($decoded['enabled']);
+
+        return (bool) $GLOBALS['security_debug_mode_cache'];
+    }
+}
+
+if (!function_exists('security_set_debug_mode')) {
+    function security_set_debug_mode(bool $enabled): bool
+    {
+        security_ensure_directory(security_get_config_directory());
+
+        $payload = [
+            'enabled' => $enabled,
+            'updated_at' => date('c'),
+        ];
+
+        $written = file_put_contents(
+            security_get_debug_state_file_path(),
+            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        );
+
+        if ($written === false) {
+            return false;
+        }
+
+        $GLOBALS['security_debug_mode_cache'] = $enabled;
+        ini_set('display_errors', $enabled ? '1' : '0');
+
+        return true;
+    }
+}
+
+if (!function_exists('security_request_expects_json')) {
+    function security_request_expects_json(): bool
+    {
+        if (PHP_SAPI === 'cli') {
+            return false;
+        }
+
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        $requestedWith = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+        $headers = headers_list();
+
+        if (str_contains($accept, 'application/json') || $requestedWith === 'xmlhttprequest') {
+            return true;
+        }
+
+        foreach ($headers as $header) {
+            if (stripos($header, 'Content-Type: application/json') === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('security_build_error_context')) {
+    function security_build_error_context(Throwable $exception, string $type = 'uncaught_exception'): array
+    {
+        return [
+            'timestamp' => date('c'),
+            'type' => $type,
+            'message' => $exception->getMessage(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'trace' => $exception->getTraceAsString(),
+            'uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+            'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'user' => security_get_log_user_label(),
+        ];
+    }
+}
+
+if (!function_exists('security_log_error_details')) {
+    function security_log_error_details(Throwable $exception, string $type = 'uncaught_exception'): void
+    {
+        $context = security_build_error_context($exception, $type);
+        security_ensure_directory(security_get_log_directory());
+
+        $entry = sprintf(
+            "[%s]\nType: %s\nMessage: %s\nFile: %s\nLine: %d\nUser: %s\nMethod: %s\nURI: %s\nIP: %s\nTrace:\n%s\n%s\n",
+            date('Y-m-d h:i:s A'),
+            $context['type'],
+            $context['message'],
+            $context['file'],
+            $context['line'],
+            $context['user'],
+            $context['method'],
+            $context['uri'],
+            $context['ip'],
+            $context['trace'],
+            str_repeat('-', 80)
+        );
+
+        error_log($entry, 3, security_get_error_log_file_path());
+    }
+}
+
+if (!function_exists('security_render_exception_payload')) {
+    function security_render_exception_payload(Throwable $exception): array
+    {
+        $payload = [
+            'success' => false,
+            'error' => SECURITY_GENERIC_ERROR_MESSAGE,
+        ];
+
+        if (security_is_debug_mode()) {
+            $payload['debug'] = [
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
+            ];
+        }
+
+        return $payload;
+    }
+}
+
+if (!function_exists('security_render_exception_page')) {
+    function security_render_exception_page(Throwable $exception): string
+    {
+        $isDebug = security_is_debug_mode();
+        $debugMessage = htmlspecialchars($exception->getMessage(), ENT_QUOTES, 'UTF-8');
+        $debugFile = htmlspecialchars($exception->getFile(), ENT_QUOTES, 'UTF-8');
+        $debugLine = (int) $exception->getLine();
+        $debugTrace = htmlspecialchars($exception->getTraceAsString(), ENT_QUOTES, 'UTF-8');
+        $title = $isDebug ? 'Debug Error' : 'Error';
+        $subtitle = $isDebug
+            ? 'Debug mode is enabled, so the full error details are shown below.'
+            : SECURITY_GENERIC_ERROR_MESSAGE;
+
+        $debugSection = '';
+        if ($isDebug) {
+            $debugSection = '
+                <div class="debug-list">
+                    <div class="debug-item">
+                        <span class="debug-label">Message</span>
+                        <div class="debug-value">' . $debugMessage . '</div>
+                    </div>
+                    <div class="debug-item">
+                        <span class="debug-label">File</span>
+                        <div class="debug-value">' . $debugFile . '</div>
+                    </div>
+                    <div class="debug-item">
+                        <span class="debug-label">Line</span>
+                        <div class="debug-value">' . $debugLine . '</div>
+                    </div>
+                </div>
+                <div class="trace-wrap">
+                    <span class="debug-label">Stack Trace</span>
+                    <pre class="trace">' . $debugTrace . '</pre>
+                </div>
+            ';
+        }
+
+        return '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>' . $title . '</title>
+    <style>
+        body {
+            font-family: Segoe UI, Arial, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .error-card {
+            width: 100%;
+            max-width: ' . ($isDebug ? '860px' : '640px') . ';
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 28px;
+            color: #0f172a;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: #475569;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .debug-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .debug-item,
+        .trace-wrap {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .debug-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .debug-value {
+            color: #0f172a;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .trace-wrap {
+            margin-top: 16px;
+        }
+
+        .trace {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #334155;
+            line-height: 1.55;
+            font-size: 14px;
+            max-height: 360px;
+            overflow: auto;
+        }
+
+        @media (max-width: 720px) {
+            .error-card {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <h1>' . $title . '</h1>
+        <p class="subtitle">' . htmlspecialchars($subtitle, ENT_QUOTES, 'UTF-8') . '</p>
+        ' . $debugSection . '
+    </div>
+</body>
+</html>';
+    }
+}
+
+if (!function_exists('security_handle_exception')) {
+    function security_handle_exception(Throwable $exception): void
+    {
+        static $handling = false;
+
+        if ($handling) {
+            exit(1);
+        }
+
+        $handling = true;
+
+        security_log_error_details($exception);
+
+        if (!headers_sent()) {
+            http_response_code(500);
+        }
+
+        if (PHP_SAPI === 'cli') {
+            $payload = security_render_exception_payload($exception);
+            fwrite(STDERR, ($payload['debug']['message'] ?? $payload['error']) . PHP_EOL);
+            if (!empty($payload['debug']['trace'])) {
+                fwrite(STDERR, $payload['debug']['trace'] . PHP_EOL);
+            }
+            exit(1);
+        }
+
+        if (security_request_expects_json()) {
+            if (!headers_sent()) {
+                header('Content-Type: application/json');
+            }
+            echo json_encode(security_render_exception_payload($exception));
+            exit;
+        }
+
+        echo security_render_exception_page($exception);
+        exit;
+    }
+}
+
+if (!function_exists('security_handle_php_error')) {
+    function security_handle_php_error(int $severity, string $message, string $file, int $line): bool
+    {
+        if (!(error_reporting() & $severity)) {
+            return false;
+        }
+
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    }
+}
+
+if (!function_exists('security_handle_shutdown_error')) {
+    function security_handle_shutdown_error(): void
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return;
+        }
+
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+        if (!in_array($error['type'], $fatalTypes, true)) {
+            return;
+        }
+
+        $exception = new ErrorException(
+            $error['message'],
+            0,
+            $error['type'],
+            $error['file'],
+            $error['line']
+        );
+
+        security_handle_exception($exception);
+    }
+}
+
+if (!function_exists('security_register_error_handlers')) {
+    function security_register_error_handlers(): void
+    {
+        static $registered = false;
+
+        if ($registered) {
+            return;
+        }
+
+        $registered = true;
+
+        error_reporting(E_ALL);
+        ini_set('display_errors', security_is_debug_mode() ? '1' : '0');
+
+        set_error_handler('security_handle_php_error');
+        set_exception_handler('security_handle_exception');
+        register_shutdown_function('security_handle_shutdown_error');
+    }
+}
+
+security_register_error_handlers();
 
 if (!function_exists('security_get_log_directory')) {
     function security_get_log_directory(): string

@@ -40,6 +40,7 @@ if ($adminDisplayName === '') {
 }
 
 $adminInitials = strtoupper(substr((string) ($adminProfile['first_name'] ?? 'A'), 0, 1) . substr((string) ($adminProfile['last_name'] ?? 'D'), 0, 1));
+$debugModeEnabled = security_is_debug_mode();
 
 // Form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -53,6 +54,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         switch ($action) {
+            case 'toggle_debug_mode':
+                $requestedDebugMode = ($_POST['debug_mode'] ?? '0') === '1';
+
+                if (security_set_debug_mode($requestedDebugMode)) {
+                    $debugModeEnabled = $requestedDebugMode;
+                    security_log_audit('ADMIN', 'SUCCESS', 'toggle_debug_mode', [
+                        'debug_mode' => $requestedDebugMode ? 'enabled' : 'disabled',
+                    ], $userId);
+                    $success = 'Debug mode ' . ($requestedDebugMode ? 'enabled' : 'disabled') . ' successfully.';
+                } else {
+                    log_event('ADMIN_ACTION_FAILURE', [
+                        'action' => 'toggle_debug_mode',
+                        'user_id' => $userId,
+                        'reason' => 'Failed to persist debug mode setting.',
+                    ]);
+                    $error = 'Unable to update debug mode right now. Please try again.';
+                }
+                break;
+
             case 'export_logs':
                 security_log_audit('ADMIN', 'SUCCESS', 'export_logs', [
                     'format' => 'csv',
@@ -460,6 +480,15 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <div class="header-actions">
       <form method="POST" class="header-action-form">
         <?php echo security_csrf_input(); ?>
+        <input type="hidden" name="action" value="toggle_debug_mode">
+        <input type="hidden" name="debug_mode" value="<?= $debugModeEnabled ? '0' : '1' ?>">
+        <button type="submit" class="debug-toggle-btn header-action-btn <?= $debugModeEnabled ? 'is-enabled' : 'is-disabled' ?>">
+          <i class="fas <?= $debugModeEnabled ? 'fa-bug' : 'fa-shield-alt' ?>"></i>
+          Debug: <?= $debugModeEnabled ? 'On' : 'Off' ?>
+        </button>
+      </form>
+      <form method="POST" class="header-action-form">
+        <?php echo security_csrf_input(); ?>
         <input type="hidden" name="action" value="export_logs">
         <button type="submit" class="yellow-btn header-action-btn">
           <i class="fas fa-file-export"></i> Export Security Logs
@@ -484,16 +513,16 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
   <!-- Products Tab -->
   <div id="products" class="tab-content active">
     <?php if (isset($success)): ?>
-      <div class="alert alert-success"><?= $success ?></div>
+      <div class="alert alert-success" data-auto-dismiss="5000"><?= $success ?></div>
     <?php endif; ?>
     <?php if (isset($_GET['error']) && $_GET['error'] === 'invalid_input'): ?>
-      <div class="alert alert-error">Unable to process the request. Please review the product input and try again.</div>
+      <div class="alert alert-error" data-auto-dismiss="5000">Unable to process the request. Please review the product input and try again.</div>
     <?php endif; ?>
     <?php if (isset($_GET['error']) && $_GET['error'] === 'invalid_stock_input'): ?>
-      <div class="alert alert-error">Unable to update stock. Please review the stock input and try again.</div>
+      <div class="alert alert-error" data-auto-dismiss="5000">Unable to update stock. Please review the stock input and try again.</div>
     <?php endif; ?>
     <?php if (isset($error)): ?>
-      <div class="alert alert-error"><?= $error ?></div>
+      <div class="alert alert-error" data-auto-dismiss="5000"><?= $error ?></div>
     <?php endif; ?>
 
     <div class="content-box">
@@ -930,6 +959,19 @@ document.querySelectorAll('input[name="phone"]').forEach((input) => {
     requestAnimationFrame(() => sanitizeAdminPhoneInput(input));
   });
 });
+
+function autoDismissAlerts() {
+  document.querySelectorAll('.alert[data-auto-dismiss]').forEach((alert) => {
+    const delay = parseInt(alert.dataset.autoDismiss || '5000', 10);
+
+    window.setTimeout(() => {
+      alert.classList.add('is-hiding');
+      window.setTimeout(() => alert.remove(), 350);
+    }, delay);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', autoDismissAlerts);
 </script>
 
 </body>

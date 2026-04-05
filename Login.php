@@ -337,6 +337,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             justify-content: center;
             margin: 15px 0;
         }
+
+        .form-alert {
+            margin: 12px 0;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: 1px solid transparent;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .form-alert.is-hiding {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        .form-alert-error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        .form-alert-success {
+            background: #ecfdf5;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
     </style>
 </head>
 <body>
@@ -372,7 +400,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstile_site_key); ?>" data-theme="light"></div>
             <?php endif; ?>
             
-            <?php if (!empty($login_error)) { echo "<p style='color: red; margin: 10px 0; font-size: 14px;'>$login_error</p>"; } ?>
+            <?php if (!empty($login_error)) { echo "<div class='form-alert form-alert-error' data-auto-dismiss='5000'>" . htmlspecialchars($login_error) . "</div>"; } ?>
             
             <button type="submit" name="login"><i class="fa fa-sign-in"></i>Sign In</button>
         </form>
@@ -440,8 +468,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
             <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstile_site_key); ?>" data-theme="light"></div>
             <?php endif; ?>
 
-            <?php if (!empty($register_error)) { echo "<p style='color: red; margin: 10px 0; font-size: 14px;'>$register_error</p>"; } ?>
-            <?php if (!empty($register_success)) { echo "<p style='color: green; margin: 10px 0; font-size: 14px;'>$register_success</p>"; } ?>
+            <?php if (!empty($register_error)) { echo "<div class='form-alert form-alert-error' data-auto-dismiss='5000'>" . htmlspecialchars($register_error) . "</div>"; } ?>
+            <?php if (!empty($register_success)) { echo "<div class='form-alert form-alert-success' data-auto-dismiss='5000'>" . htmlspecialchars($register_success) . "</div>"; } ?>
 
             <button type="submit" name="register"><i class="fa fa-user-plus"></i>Create Account</button>
         </form>
@@ -518,6 +546,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['register'])) {
     bindSanitizer('#email, #regEmail', sanitizeEmailInput);
     bindSanitizer('#firstName, #lastName', sanitizeNameInput);
     bindSanitizer('#regPhone', sanitizePhoneInput);
+
+    document.querySelectorAll('.form-alert[data-auto-dismiss]').forEach((alert) => {
+        const delay = parseInt(alert.dataset.autoDismiss || '5000', 10);
+
+        window.setTimeout(() => {
+            alert.classList.add('is-hiding');
+            window.setTimeout(() => alert.remove(), 350);
+        }, delay);
+    });
 
     <?php if (!empty($register_success)) { ?>
         toggleForm('register');

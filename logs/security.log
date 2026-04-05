@@ -7,3 +7,48 @@
 [2026-04-05 05:40:50 PM] [AUTH] [SUCCESS] User: Admin One (#3) | Action: logout | Details: user_requested | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
 [2026-04-05 05:41:14 PM] [AUTH] [SUCCESS] User: Staff One | Action: login | Details: Role: Staff | IP: ::1 | URI: /ITSECWB-MCO/Login.php
 [2026-04-05 05:41:20 PM] [AUTH] [SUCCESS] User: Staff One (#4) | Action: logout | Details: user_requested | IP: ::1 | URI: /ITSECWB-MCO/stock_management.php
+[2026-04-05 05:43:46 PM] [AUTH] [SUCCESS] User: Admin One | Action: login | Details: Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-05 05:44:01 PM] [AUTH] [SUCCESS] User: Admin One (#3) | Action: logout | Details: user_requested | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 05:44:18 PM] [AUTH] [SUCCESS] User: Admin One | Action: login | Details: Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-05 06:55:30 PM] [AUTH] [FAILED] User: Admin One (#3) | Action: session_expired | Details: Reason: idle_timeout | User Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 06:57:20 PM] [AUTH] [FAILED] User: admin1@gmail.com | Action: login | Details: Your session expired after 15 minutes of inactivity. Please sign in again. | IP: ::1 | URI: /ITSECWB-MCO/Login.php?session=expired
+[2026-04-05 06:57:31 PM] [AUTH] [FAILED] User: admin1@gmail.com | Action: login | Details: Your session expired after 15 minutes of inactivity. Please sign in again. | IP: ::1 | URI: /ITSECWB-MCO/Login.php?session=expired
+[2026-04-05 06:57:34 PM] [AUTH] [FAILED] User: admin1@gmail.com | Action: login | Details: Your session expired after 15 minutes of inactivity. Please sign in again. | IP: ::1 | URI: /ITSECWB-MCO/Login.php?session=expired
+[2026-04-05 06:58:04 PM] [AUTH] [FAILED] User: admin1@gmail.com | Action: login | Details: Invalid email and/or password | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-05 06:58:22 PM] [AUTH] [SUCCESS] User: Admin One | Action: login | Details: Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-05 06:59:14 PM] [ADMIN] [FAILED] User: Admin One (#3) | Action: add_product | Details: Event: VALIDATION_FAILURE | Action: add_product | Reason: Enter a valid product name up to 45 characters. | User Id: 3 | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 06:59:28 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 06:59:36 PM] [ADMIN] [FAILED] User: Admin One (#3) | Action: add_product | Details: Event: VALIDATION_FAILURE | Action: add_product | Reason: Enter a valid product name up to 45 characters. | User Id: 3 | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:00:22 PM] [ADMIN] [FAILED] User: Admin One (#3) | Action: add_product | Details: Event: VALIDATION_FAILURE | Action: add_product | Reason: Enter a valid product name up to 45 characters. | User Id: 3 | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:02:32 PM] [ADMIN] [FAILED] User: Admin One (#3) | Action: add_product | Details: Event: VALIDATION_FAILURE | Action: add_product | Reason: Enter a valid product name up to 45 characters. | User Id: 3 | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:02:35 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:03:01 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:03:02 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:04:04 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:04:05 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:11:56 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:17:26 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:17:28 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:18:35 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:20:30 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:20:33 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:21:44 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:21:46 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:22:29 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:22:36 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:23:09 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:23:10 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:23:27 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:24:15 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:24:16 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:24:18 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:24:52 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:24:54 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:25:08 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:25:09 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:25:10 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:32:59 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:33:01 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:33:03 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:33:13 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:33:15 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
