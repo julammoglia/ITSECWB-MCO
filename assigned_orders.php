@@ -3,6 +3,7 @@ require_once 'includes/security/auth.php';
 security_ensure_session_started();
 include ('includes/db.php');
 require_once 'includes/db_operations.php';
+require_once 'includes/security/admin.php';
 
 security_handle_logout('index.php');
 
@@ -18,23 +19,26 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_P
     header('Content-Type: application/json');
     security_require_csrf_api();
 
-    $order_id = intval($_POST['order_id']);
-    $new_status = $_POST['new_status'];
-    
-    // Validate status
-    $valid_statuses = ['Processing', 'Shipped', 'Delivered'];
-    if (in_array($new_status, $valid_statuses)) {
-        try {
-            if (db_update_order_status($conn, $order_id, $new_status)) {
-                echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to update status']);
-            }
-        } catch (Throwable $e) {
-            echo json_encode(['success' => false, 'message' => 'Failed to update status']);
-        }
+    $validation = security_admin_validate_order_status_payload($conn, $_POST);
+    if (!$validation['valid']) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => $validation['error']]);
         exit;
     }
+
+    $order_id = $validation['data']['order_id'];
+    $new_status = $validation['data']['new_status'];
+
+    try {
+        if (db_update_order_status($conn, $order_id, $new_status)) {
+            echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to update status']);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'message' => 'Failed to update status']);
+    }
+    exit;
 }
 
 // Handle order completion
@@ -165,15 +169,21 @@ function getStatusDropdown($currentStatus, $orderId, $assignmentStatus) {
     if ($assignmentStatus === 'COMPLETED') {
         return '<span class="status-badge completed">COMPLETED</span>';
     }
-    
-    $statuses = ['Processing', 'Shipped', 'Delivered'];
-    $dropdown = '<select class="status-dropdown" onchange="updateOrderStatus(' . $orderId . ', this.value)">';
-    
-    foreach ($statuses as $status) {
-        $selected = (strtolower($currentStatus) === strtolower($status)) ? 'selected' : '';
-        $dropdown .= '<option value="' . $status . '" ' . $selected . '>' . $status . '</option>';
+
+    $normalizedCurrentStatus = security_admin_validate_order_status($currentStatus) ?: 'Processing';
+    $allowedTransitions = security_admin_get_allowed_order_status_transitions($normalizedCurrentStatus);
+
+    $dropdown = '<select class="status-dropdown" onchange="updateOrderStatus(' . $orderId . ', this.value)"';
+    if ($allowedTransitions === []) {
+        $dropdown .= ' disabled';
     }
-    
+    $dropdown .= '>';
+    $dropdown .= '<option value="">' . htmlspecialchars($normalizedCurrentStatus) . '</option>';
+
+    foreach ($allowedTransitions as $status) {
+        $dropdown .= '<option value="' . htmlspecialchars($status) . '">' . htmlspecialchars($status) . '</option>';
+    }
+
     $dropdown .= '</select>';
     return $dropdown;
 }

@@ -264,6 +264,41 @@ if (!function_exists('security_admin_validate_order_status')) {
     }
 }
 
+if (!function_exists('security_admin_get_order_status')) {
+    function security_admin_get_order_status(mysqli $conn, int $orderId): ?string
+    {
+        $stmt = $conn->prepare("SELECT order_status FROM orders WHERE order_id = ?");
+        $stmt->bind_param("i", $orderId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+
+        $status = $row['order_status'] ?? null;
+
+        return is_string($status) ? trim($status) : null;
+    }
+}
+
+if (!function_exists('security_admin_get_allowed_order_status_transitions')) {
+    function security_admin_get_allowed_order_status_transitions(?string $currentStatus): array
+    {
+        $normalizedCurrentStatus = security_admin_validate_order_status($currentStatus);
+
+        if ($normalizedCurrentStatus === false) {
+            return [];
+        }
+
+        $transitions = [
+            'Processing' => ['Shipped', 'Delivered'],
+            'Shipped' => ['Delivered'],
+            'Delivered' => [],
+        ];
+
+        return $transitions[$normalizedCurrentStatus] ?? [];
+    }
+}
+
 if (!function_exists('security_admin_validate_staff_payload')) {
     function security_admin_validate_staff_payload(mysqli $conn, array $input): array
     {
@@ -330,6 +365,26 @@ if (!function_exists('security_admin_validate_order_status_payload')) {
 
         if ($newStatus === false) {
             return security_admin_validation_result(false, 'Select a valid order status.');
+        }
+
+        $currentStatus = security_admin_get_order_status($conn, (int) $orderId);
+        $normalizedCurrentStatus = security_admin_validate_order_status($currentStatus);
+
+        if ($normalizedCurrentStatus === false) {
+            return security_admin_validation_result(false, 'The current order status is invalid.');
+        }
+
+        $allowedTransitions = security_admin_get_allowed_order_status_transitions($normalizedCurrentStatus);
+
+        if (!in_array($newStatus, $allowedTransitions, true)) {
+            if ($newStatus === $normalizedCurrentStatus) {
+                return security_admin_validation_result(false, 'The order is already set to that status.');
+            }
+
+            return security_admin_validation_result(
+                false,
+                'Invalid order status transition from ' . $normalizedCurrentStatus . ' to ' . $newStatus . '.'
+            );
         }
 
         return security_admin_validation_result(true, null, [

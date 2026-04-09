@@ -738,6 +738,10 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
       </thead>
       <tbody>
         <?php while ($o = $orders->fetch_assoc()): ?>
+        <?php
+          $currentOrderStatus = security_admin_validate_order_status($o['order_status'] ?? null) ?: 'Processing';
+          $allowedStatusTransitions = security_admin_get_allowed_order_status_transitions($currentOrderStatus);
+        ?>
         <tr>
           <td><?= $o['order_id'] ?></td>
           <td><?= htmlspecialchars($o['customer_name'] ?? 'Unknown') ?></td>
@@ -755,12 +759,11 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
           <td><?= strtoupper($o['payment_method'] ?? 'N/A') ?></td>
           <td><?= $o['order_date'] ?></td>
           <td class="actions-cell single-row">
-  
-            <select onchange="updateOrderStatus(<?= $o['order_id'] ?>, this.value)" class="status-select">
-              <option value="">Update Status</option>
-              <option value="Processing" <?= $o['order_status'] == 'Processing' ? 'selected' : '' ?>>Processing</option>
-              <option value="Shipped" <?= $o['order_status'] == 'Shipped' ? 'selected' : '' ?>>Shipped</option>
-              <option value="Delivered" <?= $o['order_status'] == 'Delivered' ? 'selected' : '' ?>>Delivered</option>
+            <select onchange="updateOrderStatus(<?= $o['order_id'] ?>, this.value)" class="status-select" <?= $allowedStatusTransitions === [] ? 'disabled' : '' ?>>
+              <option value=""><?= htmlspecialchars($currentOrderStatus) ?></option>
+              <?php foreach ($allowedStatusTransitions as $statusOption): ?>
+                <option value="<?= htmlspecialchars($statusOption) ?>"><?= htmlspecialchars($statusOption) ?></option>
+              <?php endforeach; ?>
             </select>
             
             <button class="view-btn" onclick="viewOrderDetails(<?= $o['order_id'] ?>)" title="View Details">
