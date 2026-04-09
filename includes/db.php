@@ -40,7 +40,12 @@ if (!function_exists('db_resolve_ssl_file')) {
 
         $decoded = base64_decode($base64Value, true);
         if ($decoded === false || $decoded === '') {
-            return null;
+            if (strpos($base64Value, '-----BEGIN CERTIFICATE-----') !== false
+                || strpos($base64Value, '-----BEGIN ') !== false) {
+                $decoded = $base64Value;
+            } else {
+                return null;
+            }
         }
 
         $hash = sha1($decoded);
