@@ -121,7 +121,7 @@ if ($result->num_rows > 0) {
         <div class="favorites-icon"><i class="fas fa-heart"></i></div>
         <div class="favorites-text">No favorites yet</div>
         <div class="favorites-subtext">Start browsing our products and click the heart icon to add items to your favorites list.</div>
-        <a href="index.php" class="browse-btn"><i class="fas fa-shopping-bag"></i> Browse Products</a>
+        <a href="Index.php" class="browse-btn"><i class="fas fa-shopping-bag"></i> Browse Products</a>
     </div>
 <?php endif; ?>
 

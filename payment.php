@@ -35,7 +35,7 @@ $userId = security_require_login('Login.php');
     <div class="checkout-container">
         <!-- Header -->
         <div class="back-nav">
-        <a href="index.php" class="back-btn">
+        <a href="Index.php" class="back-btn">
             <span class="back-arrow">←</span>
             Back to Home
         </a>

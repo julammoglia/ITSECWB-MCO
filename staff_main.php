@@ -3,7 +3,7 @@ require_once 'includes/security/auth.php';
 security_ensure_session_started();
 include 'includes/db.php';
 
-security_handle_logout('index.php');
+security_handle_logout('Index.php');
 
 $userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 

@@ -3,7 +3,7 @@ require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php'; 
 require_once 'includes/db_operations.php';
-security_handle_logout('index.php');
+security_handle_logout('Index.php');
 
 $userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
 $statusMessage = null;

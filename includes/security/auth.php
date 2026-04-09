@@ -217,7 +217,7 @@ if (!function_exists('security_logout')) {
 }
 
 if (!function_exists('security_handle_logout')) {
-    function security_handle_logout(string $redirect = 'index.php', string $param = 'logout'): void
+    function security_handle_logout(string $redirect = 'Index.php', string $param = 'logout'): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST[$param])) {
             security_require_csrf($redirect);

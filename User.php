@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
-security_handle_logout('index.php');
+security_handle_logout('Index.php');
 
 require_once 'includes/db.php'; 
 require_once 'includes/security/input_validation.php';
@@ -456,7 +456,7 @@ $userInitials = getUserInitials($userResult['first_name'], $userResult['last_nam
   <div class="container">
     <!-- Back navigation -->
     <div class="back-nav">
-      <a href="index.php" class="back-btn">
+      <a href="Index.php" class="back-btn">
         <span class="back-arrow"><i class="fas fa-arrow-left"></i></span>
         Back to Home
       </a>

@@ -5,7 +5,7 @@ include ('includes/db.php');
 require_once 'includes/db_operations.php';
 require_once 'includes/security/admin.php';
 
-security_handle_logout('index.php');
+security_handle_logout('Index.php');
 
 $isAjaxAction = $_SERVER['REQUEST_METHOD'] === 'POST'
     && in_array($_POST['action'] ?? '', ['update_status', 'complete_order'], true);
