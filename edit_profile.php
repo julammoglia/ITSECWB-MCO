@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/db_operations.php';
 require_once 'includes/security/input_validation.php';
 require_once 'includes/security/password_policy.php';
 
@@ -144,10 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $emailCheckStmt->close();
 
-    // Update profile fields
-    $updateStmt = $conn->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ? WHERE user_id = ?");
-    $updateStmt->bind_param("ssssi", $firstName, $lastName, $email, $phone, $userId);
-    $updateStmt->execute();
+    if (!db_update_user_profile($conn, $userId, $firstName, $lastName, $email, $phone)) {
+        header("Location: User.php?error=notfound");
+        exit();
+    }
 
     $_SESSION['first_name'] = $firstName;
     $_SESSION['last_name'] = $lastName;

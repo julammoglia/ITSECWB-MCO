@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/db_operations.php';
 require_once 'includes/security.php';
 require_once 'includes/security/input_validation.php';
 
@@ -193,17 +194,7 @@ try {
             throw new Exception("Failed to insert order item: " . $stmt->error);
         }
         
-        // Update stock
-        $stock_query = "UPDATE products SET stock_qty = stock_qty - ? WHERE product_code = ?";
-        $stmt = $conn->prepare($stock_query);
-        $stmt->bind_param("ii", $item['quantity'], $item['product_code']);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to update stock: " . $stmt->error);
-        }
-        
-        // Verify stock update
-        if ($stmt->affected_rows === 0) {
+        if (!db_decrement_product_stock($conn, (int) $item['product_code'], (int) $item['quantity'], false)) {
             throw new Exception("No stock was updated for product: " . $item['product_name']);
         }
     }

@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/db_operations.php';
 
 security_handle_logout('index.php');
 $userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
@@ -13,13 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newQuantity = intval($_POST['quantity']);
     
     try {
-        // Update product stock stored procedure
-        $stmt = $conn->prepare("CALL update_product_stock(?, ?)");
-        $stmt->bind_param("si", $productCode, $newQuantity);
-        $stmt->execute();
-
-        // Checker
-        $success = "Stock level updated successfully!";
+        if (db_update_product_stock($conn, (int) $productCode, $newQuantity)) {
+            $success = "Stock level updated successfully!";
+        } else {
+            $error = SECURITY_GENERIC_ERROR_MESSAGE;
+        }
         
     } catch (Throwable $e) {
         security_log_error_details($e, 'stock_management_error');

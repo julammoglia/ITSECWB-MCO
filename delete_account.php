@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/db_operations.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     security_redirect('User.php');
@@ -23,8 +24,9 @@ if (strtolower(trim($role)) !== 'customer') {
     exit();
 }
 
-$deleteStmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
-$deleteStmt->bind_param("i", $userId);
-$deleteStmt->execute();
+if (!db_delete_user_account($conn, $userId)) {
+    header("Location: User.php?error=notfound");
+    exit();
+}
 
 security_logout('Index.php');

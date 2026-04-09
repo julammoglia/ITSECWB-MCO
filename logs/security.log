@@ -52,3 +52,8 @@
 [2026-04-05 07:33:03 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: enabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
 [2026-04-05 07:33:13 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
 [2026-04-05 07:33:15 PM] [ADMIN] [SUCCESS] User: Admin One (#3) | Action: toggle_debug_mode | Details: Debug Mode: disabled | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:34:13 PM] [AUTH] [SUCCESS] User: Admin One (#3) | Action: logout | Details: user_requested | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:34:21 PM] [AUTH] [SUCCESS] User: Admin One | Action: login | Details: Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-05 07:51:12 PM] [AUTH] [FAILED] User: Admin One (#3) | Action: session_expired | Details: Reason: idle_timeout | User Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
+[2026-04-05 07:51:27 PM] [AUTH] [SUCCESS] User: Customer One | Action: login | Details: Role: Customer | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-05 08:47:12 PM] [AUTH] [FAILED] User: Customer One (#1) | Action: session_expired | Details: Reason: idle_timeout | User Role: Customer | IP: ::1 | URI: /ITSECWB-MCO/index.php

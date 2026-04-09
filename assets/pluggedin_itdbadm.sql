@@ -1,7 +1,3 @@
-DROP DATABASE IF EXISTS pluggedin_itdbadm;
-CREATE DATABASE pluggedin_itdbadm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE pluggedin_itdbadm;
-
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
@@ -24,40 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `pluggedin_itdbadm`
 --
-
-DELIMITER $$
---
--- Procedures
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `add_new_product` (IN `product_name` VARCHAR(45), IN `category_code` INT, IN `description` VARCHAR(45), IN `stock_qty` INT, IN `srp_php` FLOAT)   BEGIN
-   INSERT INTO products (product_name, category_code, description, stock_qty, srp_php)
-   VALUES (product_name, category_code, description, stock_qty, srp_php);
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_customer_account` (IN `customer_id` INT)   BEGIN
-   DELETE FROM orders WHERE user_id = customer_id;
-   DELETE FROM cart WHERE user_id = customer_id;
-   DELETE FROM isfavorite WHERE user_id = customer_id;
-   DELETE FROM users WHERE user_id = customer_id;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_product` (IN `input_product_code` INT)   BEGIN
-  DELETE FROM cart WHERE product_code = input_product_code;
-  DELETE FROM isfavorite WHERE product_code = input_product_code;
-  DELETE FROM order_items WHERE product_code = input_product_code;
-
-  DELETE FROM products WHERE product_code = input_product_code;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `update_order_status` (IN `input_order_id` INT, IN `new_status` VARCHAR(45))   BEGIN
-   UPDATE orders SET order_status = new_status WHERE order_id = input_order_id;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `update_product_stock` (IN `input_product_code` INT, IN `new_stock` INT)   BEGIN
-   UPDATE products SET stock_qty = new_stock WHERE product_code = input_product_code;
-END$$
-
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -246,19 +208,6 @@ INSERT INTO `orders` (`order_id`, `user_id`, `order_date`, `totalamt_php`, `orde
 (20, 1, '2025-07-21', 12000, 'Delivered', 3),
 (24, 1, '2025-07-22', 16000, 'Delivered', 3);
 
---
--- Triggers `orders`
---
-DELIMITER $$
-CREATE TRIGGER `order_status_logging_trigger` AFTER UPDATE ON `orders` FOR EACH ROW BEGIN
-   IF OLD.order_status != NEW.order_status THEN
-      INSERT INTO order_status_log (order_id, old_status, new_status, change_date)
-      VALUES (NEW.order_id, OLD.order_status, NEW.order_status, NOW());
-   END IF;
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -371,41 +320,6 @@ INSERT INTO `products` (`product_code`, `category_code`, `product_name`, `descri
 (11, 1, 'test', 'test', 100, 1),
 (12, 4, 'test2', 'test2', 100, 1);
 
---
--- Triggers `products`
---
-DELIMITER $$
-CREATE TRIGGER `inventory_adjustment_trigger` AFTER UPDATE ON `products` FOR EACH ROW BEGIN
-   IF OLD.stock_qty != NEW.stock_qty THEN
-      INSERT INTO inventory_log (product_code, old_qty, new_qty, change_date)
-      VALUES (NEW.product_code, OLD.stock_qty, NEW.stock_qty, current_timestamp());
-   END IF;
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `prevent_negative_inventory` BEFORE UPDATE ON `products` FOR EACH ROW BEGIN
-   -- Ensure that the new stock quantity is not negative
-   IF NEW.stock_qty < 0 THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock quantity cannot be negative';
-   END IF;
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `product_deletion_log_trigger` AFTER DELETE ON `products` FOR EACH ROW BEGIN
-  INSERT INTO product_deletion_log (
-    product_code, product_name, category_code,
-    description, deletion_date
-  )
-  VALUES (
-    OLD.product_code, OLD.product_name, OLD.category_code,
-    OLD.description, CURRENT_TIMESTAMP()
-  );
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -440,39 +354,6 @@ INSERT INTO `staff_assigned_orders` (`user_id`, `order_id`, `status`) VALUES
 (4, 24, 'COMPLETED'),
 (4, 20, 'COMPLETED');
 
---
--- Triggers `staff_assigned_orders`
---
-DELIMITER $$
-CREATE TRIGGER `check_assignedorders` BEFORE INSERT ON `staff_assigned_orders` FOR EACH ROW BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM staff_assigned_orders
-        WHERE order_id = NEW.order_id
-    ) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Order is already assigned to a staff member.';
-    END IF;
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `validate_order_completion` BEFORE UPDATE ON `staff_assigned_orders` FOR EACH ROW BEGIN
-    IF NEW.status = 'COMPLETED' THEN
-        IF NOT EXISTS (
-            SELECT 1 
-            FROM orders 
-            WHERE order_id = NEW.order_id 
-            AND order_status = 'Delivered'
-        ) THEN
-            SIGNAL SQLSTATE '45000' 
-            SET MESSAGE_TEXT = 'Cannot mark order as COMPLETED. Order must be in Delivered status first.';
-        END IF;
-    END IF;
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -499,40 +380,6 @@ INSERT INTO `users` (`user_id`, `user_role`, `first_name`, `last_name`, `email`,
 (2, 'Customer', 'Customer', 'Two', 'customer2@gmail.com', '09000000002', '$2y$12$Nt2J86yGNyWcOL6fjK2DE.GOBqq6zDIIM4LO2qmcGgrawPx.CO95K', NULL),
 (3, 'Admin', 'Admin', 'One', 'admin1@gmail.com', '09000000004', '$2y$12$6UoJfA5vzf2ILHfAmIeUIuy8L3YBcXSNGW2NRWOxfPht1wTMmy5Sm', NULL),
 (4, 'Staff', 'Staff', 'One', 'staff1@gmail.com', '09000000003', '$2y$12$SWtThigB7cfUeACS7RxwBOkzCqxKZpGLK7.ntgYT1fAMJANz3G1sq', NULL);
-
---
--- Triggers `users`
---
-DELIMITER $$
-CREATE TRIGGER `customer_deletion_log_trigger` AFTER DELETE ON `users` FOR EACH ROW BEGIN
-   INSERT INTO customer_deletion_log (user_id, first_name, last_name, deletion_date)
-   VALUES (OLD.user_id, OLD.first_name, OLD.last_name, CURRENT_TIMESTAMP());
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `log_customer_edits` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
-    IF LOWER(OLD.user_role) = 'customer' AND (
-        OLD.first_name <> NEW.first_name OR
-        OLD.last_name <> NEW.last_name
-    ) THEN
-        INSERT INTO customer_edit_log (
-            user_id,
-            old_first_name,
-            new_first_name,
-            old_last_name,
-            new_last_name
-        ) VALUES (
-            OLD.user_id,
-            OLD.first_name,
-            NEW.first_name,
-            OLD.last_name,
-            NEW.last_name
-        );
-    END IF;
-END
-$$
-DELIMITER ;
 
 --
 -- Indexes for dumped tables

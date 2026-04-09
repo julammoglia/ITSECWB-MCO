@@ -33,10 +33,6 @@ GRANT SELECT ON pluggedin_itdbadm.order_items TO 'staff'@'%';
 -- Need to view payments for order processing
 GRANT SELECT ON pluggedin_itdbadm.payments TO 'staff'@'%';
 
--- Execute stored procedures related to staff functions
-GRANT EXECUTE ON PROCEDURE pluggedin_itdbadm.update_order_status TO 'staff'@'%';
-GRANT EXECUTE ON PROCEDURE pluggedin_itdbadm.update_product_stock TO 'staff'@'%';
-
 FLUSH PRIVILEGES;
 
 -- ===============================================================================
@@ -66,9 +62,6 @@ GRANT SELECT, UPDATE ON pluggedin_itdbadm.users TO 'customer'@'%';
 
 -- Delete their own account
 GRANT DELETE ON pluggedin_itdbadm.users TO 'customer'@'%';
-
--- Execute stored procedure for account deletion
-GRANT EXECUTE ON PROCEDURE pluggedin_itdbadm.delete_customer_account TO 'customer'@'%';
 
 -- View their own orders
 GRANT SELECT ON pluggedin_itdbadm.orders TO 'customer'@'%';

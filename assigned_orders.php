@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 include ('includes/db.php');
+require_once 'includes/db_operations.php';
 
 security_handle_logout('index.php');
 
@@ -23,16 +24,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_P
     // Validate status
     $valid_statuses = ['Processing', 'Shipped', 'Delivered'];
     if (in_array($new_status, $valid_statuses)) {
-        $updateQuery = "UPDATE orders SET order_status = ? WHERE order_id = ?";
-        $updateStmt = $conn->prepare($updateQuery);
-        $updateStmt->bind_param("si", $new_status, $order_id);
-        
-        if ($updateStmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
-        } else {
+        try {
+            if (db_update_order_status($conn, $order_id, $new_status)) {
+                echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to update status']);
+            }
+        } catch (Throwable $e) {
             echo json_encode(['success' => false, 'message' => 'Failed to update status']);
         }
-        $updateStmt->close();
         exit;
     }
 }
@@ -43,27 +43,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'complete_order' && isset($_
     security_require_csrf_api();
 
     $order_id = intval($_POST['order_id']);
-
-    $checkOrderQuery = "SELECT order_status FROM orders WHERE order_id = ?";
-    $checkStmt = $conn->prepare($checkOrderQuery);
-    $checkStmt->bind_param("i", $order_id);
-    $checkStmt->execute();
-    $result = $checkStmt->get_result();
-    $orderStatus = $result->fetch_assoc();
-
-    // Update staff_assigned_orders status to COMPLETED
-    $completeQuery = "UPDATE staff_assigned_orders SET status = 'COMPLETED' WHERE order_id = ? AND user_id = ?";
-    $completeStmt = $conn->prepare($completeQuery);
-    $completeStmt->bind_param("ii", $order_id, $userId);
-        
-    if ($completeStmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Order marked as completed successfully']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to mark order as completed']);
+    try {
+        if (db_update_staff_assignment_status($conn, $userId, $order_id, 'COMPLETED')) {
+            echo json_encode(['success' => true, 'message' => 'Order marked as completed successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to mark order as completed']);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-    
-    $completeStmt->close();
-    $checkStmt->close();
     exit;
 }
 

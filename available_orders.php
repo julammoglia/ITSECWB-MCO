@@ -2,9 +2,21 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php'; 
+require_once 'includes/db_operations.php';
 security_handle_logout('index.php');
 
 $userId = security_require_role($conn, 'Staff', 'Login.php', 'Index.php');
+$statusMessage = null;
+
+if (isset($_GET['status'])) {
+    if ($_GET['status'] === 'assigned') {
+        $statusMessage = ['type' => 'success', 'text' => 'Order assigned successfully.'];
+    } elseif ($_GET['status'] === 'already_assigned') {
+        $statusMessage = ['type' => 'error', 'text' => 'Order is already assigned to a staff member.'];
+    } elseif ($_GET['status'] === 'assign_failed') {
+        $statusMessage = ['type' => 'error', 'text' => 'Unable to assign the order right now. Please try again.'];
+    }
+}
 
 // Handle order assignment
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -14,11 +26,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'];
 
     if ($action === 'assign') {
-        // Insert into staff_assigned_orders
-        $stmt = $conn->prepare("INSERT INTO staff_assigned_orders (user_id, order_id, status) VALUES (?, ?, ?)");
-        $status = 'ASSIGNED';
-        $stmt->bind_param("iis", $userId, $orderId, $status);
-        $stmt->execute();
+        try {
+            db_assign_order_to_staff($conn, $userId, (int) $orderId);
+            header('Location: available_orders.php?status=assigned');
+            exit();
+        } catch (Throwable $e) {
+            if ($e instanceof RuntimeException
+                && $e->getMessage() === 'Order is already assigned to a staff member.') {
+                header('Location: available_orders.php?status=already_assigned');
+                exit();
+            }
+
+            header('Location: available_orders.php?status=assign_failed');
+            exit();
+        }
     }
 
     header('Location: available_orders.php');
@@ -138,6 +159,14 @@ while ($order = $ordersResult->fetch_assoc()) {
                 </svg>
                 <h2 class="card-title">Available Orders to Pick Up</h2>
             </div>
+
+            <?php if ($statusMessage !== null): ?>
+                <div style="<?php echo $statusMessage['type'] === 'success'
+                    ? 'margin-bottom: 16px; padding: 12px 16px; border-radius: 12px; border: 1px solid #86efac; background: #f0fdf4; color: #166534;'
+                    : 'margin-bottom: 16px; padding: 12px 16px; border-radius: 12px; border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b;'; ?>">
+                    <?php echo htmlspecialchars($statusMessage['text']); ?>
+                </div>
+            <?php endif; ?>
             
             <table class="stock-table">
                 <thead>

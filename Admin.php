@@ -2,6 +2,7 @@
 require_once 'includes/security/auth.php';
 security_ensure_session_started();
 require_once 'includes/db.php';
+require_once 'includes/db_operations.php';
 require_once 'includes/security.php';
 require_once 'includes/security/admin.php';
 require_once 'includes/security/password_policy.php';
@@ -99,23 +100,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stockQty = $validation['data']['stock_qty'];
                 $srpPhp = $validation['data']['srp_php'];
 
-                // Use add_new_product stored procedure
-                $stmt = $conn->prepare("CALL add_new_product(?, ?, ?, ?, ?)");
-                $stmt->bind_param("sisid", 
-                    $productName, 
-                    $categoryCode, 
-                    $description, 
-                    $stockQty, 
+                if (db_add_new_product(
+                    $conn,
+                    $productName,
+                    $categoryCode,
+                    $description,
+                    $stockQty,
                     $srpPhp
-                );
-                if ($stmt->execute()) {
+                )) {
                     security_log_audit('ADMIN', 'SUCCESS', 'add_product', [
                         'product_name' => $productName,
                         'category_code' => $categoryCode,
                         'stock_qty' => $stockQty,
                         'price_php' => number_format($srpPhp, 2, '.', ''),
                     ], $userId);
-                    $success = "Product added successfully! Inventory trigger logged the new stock.";
+                    $success = "Product added successfully.";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
                         'action' => 'add_product',
@@ -124,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $error = "Unable to add the product right now. Please try again.";
                 }
-                $stmt->close();
                 break;
              
             case 'delete_product':
@@ -141,14 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $productId = $validation['data']['product_id'];
 
-                // Use delete_product stored procedure
-                $stmt = $conn->prepare("CALL delete_product(?)");
-                $stmt->bind_param("i", $productId);
-                if ($stmt->execute()) {
+                if (db_delete_product($conn, $productId)) {
                     security_log_audit('ADMIN', 'SUCCESS', 'delete_product', [
                         'product_id' => $productId,
                     ], $userId);
-                    $success = "Product deleted successfully! Delete product trigger logged the deleted product.";
+                    $success = "Product deleted successfully.";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
                         'action' => 'delete_product',
@@ -158,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $error = "Unable to delete the product right now. Please try again.";
                 }
-                $stmt->close();
                 break;
 
             case 'update_stock':
@@ -177,17 +171,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $productCode = $validation['data']['product_code'];
                 $newStock = $validation['data']['new_stock'];
 
-                // Use update_product_stock stored procedure
-                $stmt = $conn->prepare("CALL update_product_stock(?, ?)");
-                $stmt->bind_param("ii", $productCode, $newStock);
-                
                 try {
-                    if ($stmt->execute()) {
+                    if (db_update_product_stock($conn, $productCode, $newStock)) {
                         security_log_audit('ADMIN', 'SUCCESS', 'update_stock', [
                             'product_code' => $productCode,
                             'new_stock' => $newStock,
                         ], $userId);
-                        $success = "Stock updated successfully! Inventory adjustment trigger logged the change.";
+                        $success = "Stock updated successfully.";
                     } else {
                         log_event('ADMIN_ACTION_FAILURE', [
                             'action' => 'update_stock',
@@ -206,7 +196,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $error = "Unable to update stock right now. Please review the quantity and try again.";
                 }
-                $stmt->close();
                 break;
 
             case 'add_staff':
@@ -272,15 +261,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $orderId = $validation['data']['order_id'];
                 $newStatus = $validation['data']['new_status'];
 
-                // Use update_order_status stored procedure
-                $stmt = $conn->prepare("CALL update_order_status(?, ?)");
-                $stmt->bind_param("is", $orderId, $newStatus);
-                if ($stmt->execute()) {
+                if (db_update_order_status($conn, $orderId, $newStatus)) {
                     security_log_audit('ADMIN', 'SUCCESS', 'update_order_status', [
                         'order_id' => $orderId,
                         'new_status' => $newStatus,
                     ], $userId);
-                    echo json_encode(['success' => true, 'message' => 'Order status updated! Status change trigger logged the update.']);
+                    echo json_encode(['success' => true, 'message' => 'Order status updated successfully.']);
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
                         'action' => 'update_order_status',
@@ -291,7 +277,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     http_response_code(500);
                     echo json_encode(['success' => false, 'message' => 'Unable to update the order status right now.']);
                 }
-                $stmt->close();
                 exit;
                 break;
 
@@ -309,24 +294,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $targetUserId = $validation['data']['user_id'];
 
-                // Delete staff (will trigger customer_deletion_log_trigger if customer)
-                $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ? AND user_role IN ('Staff', 'Admin')");
-                $stmt->bind_param("i", $targetUserId);
-                if ($stmt->execute()) {
-                    security_log_audit('ADMIN', 'SUCCESS', 'delete_staff', [
-                        'target_user_id' => $targetUserId,
-                    ], $userId);
-                    $success = "Staff member deleted successfully!";
-                } else {
+                try {
+                    if (db_delete_user_account($conn, $targetUserId)) {
+                        security_log_audit('ADMIN', 'SUCCESS', 'delete_staff', [
+                            'target_user_id' => $targetUserId,
+                        ], $userId);
+                        $success = "Staff member deleted successfully.";
+                    } else {
+                        log_event('ADMIN_ACTION_FAILURE', [
+                            'action' => 'delete_staff',
+                            'user_id' => $userId,
+                            'target_user_id' => $targetUserId,
+                            'db_error' => $conn->error,
+                        ]);
+                        $error = "Unable to delete the account right now. Please try again.";
+                    }
+                } catch (Throwable $e) {
                     log_event('ADMIN_ACTION_FAILURE', [
                         'action' => 'delete_staff',
                         'user_id' => $userId,
                         'target_user_id' => $targetUserId,
-                        'db_error' => $conn->error,
+                        'exception' => $e->getMessage(),
                     ]);
                     $error = "Unable to delete the account right now. Please try again.";
                 }
-                $stmt->close();
                 break;
 
             case 'delete_customer':
@@ -343,14 +334,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $customerId = $validation['data']['customer_id'];
 
-                // Use delete_customer_account stored procedure
-                $stmt = $conn->prepare("CALL delete_customer_account(?)");
-                $stmt->bind_param("i", $customerId);
-                if ($stmt->execute()) {
+                if (db_delete_customer_account($conn, $customerId)) {
                     security_log_audit('ADMIN', 'SUCCESS', 'delete_customer', [
                         'customer_id' => $customerId,
                     ], $userId);
-                    $success = "Customer account deleted successfully! Deletion trigger logged the action.";
+                    $success = "Customer account deleted successfully.";
                 } else {
                     log_event('ADMIN_ACTION_FAILURE', [
                         'action' => 'delete_customer',
@@ -360,7 +348,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $error = "Unable to delete the customer account right now. Please try again.";
                 }
-                $stmt->close();
                 break;
 
             default:
@@ -526,7 +513,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
     <?php endif; ?>
 
     <div class="content-box">
-    <h3><i class="fas fa-plus"></i> Add New Product (Using Stored Procedure)</h3>
+    <h3><i class="fas fa-plus"></i> Add New Product</h3>
     <form method="POST" class="form-grid single-row">
       <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="add_product">
@@ -599,7 +586,7 @@ while ($order = $orderDetailsQuery->fetch_assoc()) {
 
   <div id="stock" class="tab-content">
   <div class="content-box">
-  <h3><i class="fas fa-sync-alt"></i> Update Stock (Using Stored Procedure)</h3>
+  <h3><i class="fas fa-sync-alt"></i> Update Stock</h3>
     <form method="POST" class="form-grid single-row">
       <?php echo security_csrf_input(); ?>
       <input type="hidden" name="action" value="update_stock">
@@ -811,7 +798,7 @@ function showTab(tabId) {
 }
 
 function updateOrderStatus(orderId, newStatus) {
-  if (newStatus && confirm(`Update order #${orderId} status to ${newStatus}? This will trigger the order status logging.`)) {
+  if (newStatus && confirm(`Update order #${orderId} status to ${newStatus}?`)) {
     const formData = new FormData();
     formData.append('action', 'update_order_status');
     formData.append('order_id', orderId);
@@ -825,7 +812,7 @@ function updateOrderStatus(orderId, newStatus) {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        alert('Order status updated successfully! Status change logged by trigger.');
+          alert('Order status updated successfully!');
         location.reload();
       } else {
         alert('Error updating order status: ' + data.message);
@@ -878,7 +865,7 @@ function quickRestock(productCode, productName) {
       if (data.includes('Error')) {
         alert('Error updating stock: ' + data);
       } else {
-        alert('Stock updated successfully! Inventory adjustment logged by trigger.');
+        alert('Stock updated successfully!');
         location.reload();
       }
     })
