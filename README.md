@@ -1,45 +1,65 @@
-# Milestone 1: ITSECWB-MCO (PluggedIn) 
+# PluggedIn (ITSECWB-MCO)
 
-PluggedIn is an online electronics and accessories store that specializes in high-quality, budget-friendly digital products such as headphones, earphones, keyboards, mics, monitors, speakers, and mice. It is designed to provide a seamless shopping experience, offering multiple currencies for international users (PHP, USD, KRW). The platform supports real-time inventory tracking, transaction logging, and role-based user access, with features for both customers and admins.
+PluggedIn is a PHP + MySQL electronics e-commerce web application with customer, staff, and admin workflows. This README is written mainly as a setup and deployment guide for local XAMPP use and Render + Aiven deployment.
 
-Note: This project builds upon an older ITDBADM project that we were permitted to reuse. We refactored and enhanced it to meet the current course requirements (e.g., secure password hashing, generic auth errors, role-based access, and other security-oriented improvements) as instructed by the professor.
+## Project Summary
 
-Technologies Used:
-PHP: Server-side scripting to handle business logic and user interactions.
-HTML: For structuring the web pages.
-JavaScript: Client-side functionality, such as interactivity and form handling.
-SQL: For database management (MySQL via phpMyAdmin)
-MySQL: Database for managing users, products, transactions, and more.
-Docker: Containerized deployment for Render and other hosting platforms.
+### Customer features
+- Register and sign in
+- Edit profile and change password
+- Browse products
+- Add and remove favorites
+- Add to cart and checkout
+- View order history
+- Delete account
 
-## Prerequisites
-- Install XAMPP
-  - Launch the app and start Apache and MySQL
-  - If your MySQL runs on another port (e.g., 3306), you must configure MySQL on the XAMPP interface to port 3307. 
+### Admin features
+- Add and delete products
+- Update stock
+- Add staff accounts
+- Delete staff accounts
+- Delete customer accounts
+- Update order status
+- Export audit logs
 
-## Database Setup
-1) Create database
-2) Import pluggedin_itdbadm.sql
-3) Verify files
+### Security features
+- Prepared statements
+- CSRF protection
+- Server-side validation
+- Stored XSS protections
+- Session timeout handling
+- Audit logging
+- Debug and generic error modes
 
-Note:
-- The schema no longer relies on stored procedures or triggers.
-- Product, order, assignment, and audit side effects are now handled in PHP.
+## Tech Stack
+- PHP 8.2
+- MySQL
+- HTML, CSS, JavaScript
+- Docker
+- Render
+- Aiven MySQL
 
-If you already have an older local database imported, run the one-time migration:
-```bash
-/Applications/XAMPP/xamppfiles/bin/php scripts/migrate_legacy_users.php
-```
+## Important Notes
+- The project is SQL-based.
+- Stored procedures are no longer used.
+- SQL triggers are no longer used.
+- Their previous behavior was moved into PHP.
+- The schema is compatible with stricter managed MySQL environments.
+- Linux hosting is case-sensitive, so links must use the real filenames such as `Index.php`.
 
-This migration safely:
-- adds the missing `phone` column to `users` if needed
-- adds a unique index on `users.email` if possible
-- converts legacy plaintext passwords in `users.password` to bcrypt hashes
+Schema file:
+- [pluggedin_itdbadm.sql](./assets/pluggedin_itdbadm.sql)
 
-## Application Configuration
-Database configuration now comes from environment variables. Local `.env` loading is supported through [`.env.example`](./.env.example), while Render should use dashboard environment variables.
+## Environment Variables
 
-Supported database variables:
+The app uses environment variables for database and deployment configuration.
+
+See:
+- [`.env.example`](./.env.example)
+
+Main variables:
+- `APP_ENV`
+- `APP_DEBUG`
 - `DB_HOST`
 - `DB_PORT`
 - `DB_NAME`
@@ -47,86 +67,162 @@ Supported database variables:
 - `DB_PASSWORD`
 - `DB_CHARSET`
 - `DB_CONNECT_TIMEOUT`
-
-Optional SSL variables for external MySQL providers such as Aiven:
-- `DB_SSL_CA` or `DB_SSL_CA_BASE64`
-- `DB_SSL_CERT` or `DB_SSL_CERT_BASE64`
-- `DB_SSL_KEY` or `DB_SSL_KEY_BASE64`
-- `DB_SSL_CIPHER`
-- `DB_SSL_VERIFY_SERVER_CERT`
-
-Turnstile variables:
 - `TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
 
-## Running Locally (XAMPP)
-1) Place the project folder at:
-- C:xampp/htdocs/ITSECWB-MCO
+Optional SSL variables for external MySQL:
+- `DB_SSL_CA`
+- `DB_SSL_CA_BASE64`
+- `DB_SSL_CERT`
+- `DB_SSL_CERT_BASE64`
+- `DB_SSL_KEY`
+- `DB_SSL_KEY_BASE64`
+- `DB_SSL_CIPHER`
+- `DB_SSL_VERIFY_SERVER_CERT`
 
-2) Start XAMPP services
-- Start Apache and MySQL 
+## Local Setup (XAMPP)
 
-3) Configure local environment
-- Copy `.env.example` to `.env`
-- Set local database values, for example:
-  - `DB_HOST=127.0.0.1`
-  - `DB_PORT=3307`
-  - `DB_NAME=pluggedin_itdbadm`
-  - `DB_USER=root`
-  - `DB_PASSWORD=`
+1. Place the project in:
+   - `C:\xampp\htdocs\ITSECWB-MCO`
+2. Start Apache and MySQL in XAMPP.
+3. Create a local MySQL database.
+4. Import [pluggedin_itdbadm.sql](./assets/pluggedin_itdbadm.sql).
+5. Copy `.env.example` to `.env`.
+6. Configure local values, for example:
 
-4) Open in browser
-- Public catalog: http://localhost/ITSECWB-MCO/Index.php
-- Authentication: http://localhost/ITSECWB-MCO/Login.php
-- User dashboard: http://localhost/ITSECWB-MCO/User.php (requires login)
-- Admin dashboard: http://localhost/ITSECWB-MCO/Admin.php (requires Admin role)
+```env
+APP_ENV=production
+APP_DEBUG=false
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=pluggedin_itdbadm
+DB_USER=root
+DB_PASSWORD=
+DB_CHARSET=utf8mb4
+DB_CONNECT_TIMEOUT=10
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
+```
 
-## Deployment on Render with Docker
-This repository now includes a [Dockerfile](./Dockerfile) for Render deployment.
+7. Open:
+   - `http://localhost/ITSECWB-MCO/Index.php`
 
-Recommended setup:
-1. Create an external MySQL database such as Aiven.
-2. Import [pluggedin_itdbadm.sql](./assets/pluggedin_itdbadm.sql) into that database.
-3. Create a new Render Web Service from this repo.
-4. Render will detect the Dockerfile and build the container.
-5. Add these environment variables in Render:
-   - `DB_HOST`
-   - `DB_PORT`
-   - `DB_NAME`
-   - `DB_USER`
-   - `DB_PASSWORD`
-   - `TURNSTILE_SITE_KEY`
-   - `TURNSTILE_SECRET_KEY`
-6. If your external DB requires SSL, also add:
-   - `DB_SSL_CA_BASE64` with the base64-encoded CA certificate
-   - optionally `DB_SSL_VERIFY_SERVER_CERT=true`
+## Deployment on Render
 
-Notes:
-- The container binds Apache to Render's `PORT` automatically.
-- Uploaded profile pictures, logs, and debug config remain filesystem-based, so use a persistent disk or external object storage if you need durable file storage in production.
+This repository is ready for Docker deployment on Render.
 
-## Authentication & Passwords
-- Registration, login verification, and password reset use password_hash/password_verify with bcrypt.
-- Admin-created staff/admin users (Admin.php) now use password_hash (bcrypt) to prevent plaintext storage.
-- Login failure message is generic ("Invalid email and/or password") to avoid leaking which field was incorrect.
+Included deployment files:
+- [Dockerfile](./Dockerfile)
+- [apache-vhost.conf](./docker/apache-vhost.conf)
+- [start-apache.sh](./docker/start-apache.sh)
 
-## Troubleshooting
-- Session keeps redirecting to Login:
-  - Clear browser cookies; ensure PHP sessions are enabled and writable.
+### Render setup
+1. Push the latest project code to GitHub.
+2. Create a new Render Web Service.
+3. Choose `Docker` as the environment.
+4. Leave `Root Directory` blank if deploying from the repo root.
+5. Add the environment variables listed below.
+6. Deploy the service.
 
-- Database connection failure:
-  - Verify `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
-  - Check `logs/error.log` for the latest connection error.
+## Database Deployment with Aiven
 
-- External MySQL SSL issues:
-  - Confirm the CA certificate is supplied using `DB_SSL_CA` or `DB_SSL_CA_BASE64`.
-  - Make sure the DB host and port match your provider settings.
+### Aiven setup
+1. Create an Aiven MySQL service.
+2. Use the provided database, host, port, username, and password.
+3. Import [pluggedin_itdbadm.sql](./assets/pluggedin_itdbadm.sql) into `defaultdb` or your selected database.
+4. Copy the CA certificate from Aiven if SSL is required.
 
-## License
-- This project was developed solely for academic requirements. 
+### Required Render environment variables
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `TURNSTILE_SITE_KEY`
+- `TURNSTILE_SECRET_KEY`
 
-Team Members:
-Nicole Ashley L. Corpuz
-Princess Loraine R. Escobar
-Julianna Charlize Y. Lammoglia
-Tristan Neo M. Mercado
+### Recommended variables
+- `APP_DEBUG=false`
+- `DB_CHARSET=utf8mb4`
+- `DB_CONNECT_TIMEOUT=10`
+- `DB_SSL_VERIFY_SERVER_CERT=true`
+
+### Aiven SSL notes
+Use one of:
+- `DB_SSL_CA`
+- `DB_SSL_CA_BASE64`
+
+The app supports:
+- full raw PEM certificate text pasted into `DB_SSL_CA_BASE64`
+- or base64-encoded certificate contents
+
+Optional client SSL variables:
+- `DB_SSL_CERT`
+- `DB_SSL_CERT_BASE64`
+- `DB_SSL_KEY`
+- `DB_SSL_KEY_BASE64`
+- `DB_SSL_CIPHER`
+
+## Turnstile / CAPTCHA
+
+If login or registration CAPTCHA does not load on the deployed site:
+- verify `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`
+- make sure your Render hostname is allowed in Cloudflare Turnstile
+- include local hostnames too if needed:
+  - `localhost`
+  - `127.0.0.1`
+
+## Logs and Debugging
+
+Audit log:
+- [security.log](./logs/security.log)
+
+Error log:
+- [error.log](./logs/error.log)
+
+Audit logging includes:
+- authentication events
+- transaction events
+- administrative actions
+
+The admin dashboard can export audit logs as CSV.
+
+Debug mode can be controlled by:
+- `config/debug_mode.json`
+- `APP_DEBUG=true` or `APP_DEBUG=false`
+
+Recommended deployment value:
+- `APP_DEBUG=false`
+
+## Deployment Troubleshooting
+
+### Generic error page on Render
+- temporarily set `APP_DEBUG=true`
+- reload the page
+- inspect the detailed debug output
+- set `APP_DEBUG=false` again after fixing the issue
+
+### MySQL SSL connection problems
+- verify the Aiven host, port, DB name, username, and password
+- verify the CA certificate value
+- confirm `DB_SSL_VERIFY_SERVER_CERT=true`
+
+### 404 on Render but not on XAMPP
+- check filename case
+- `Index.php` and `index.php` are different on Linux
+
+### First request is slow
+- Render free instances may sleep during inactivity
+- the first request may take longer while the service wakes up
+
+## Demo / Production Notes
+- The app is accessible via the internet when deployed on Render.
+- Render provides HTTPS for the deployed app.
+- Uploaded files and log files are still container filesystem-based.
+- Checkout is application-simulated and not connected to a real payment gateway.
+
+## Team
+- Nicole Ashley L. Corpuz
+- Princess Loraine R. Escobar
+- Julianna Charlize Y. Lammoglia
+- Tristan Neo M. Mercado
