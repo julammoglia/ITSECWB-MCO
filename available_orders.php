@@ -22,8 +22,13 @@ if (isset($_GET['status'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     security_require_csrf('available_orders.php');
 
-    $orderId = $_POST['order_id'];
-    $action = $_POST['action'];
+    $orderId = intval($_POST['order_id'] ?? 0);
+    $action = $_POST['action'] ?? '';
+
+    if ($orderId <= 0) {
+        header('Location: available_orders.php');
+        exit();
+    }
 
     if ($action === 'assign') {
         try {

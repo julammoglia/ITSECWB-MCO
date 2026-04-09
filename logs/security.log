@@ -57,3 +57,6 @@
 [2026-04-05 07:51:12 PM] [AUTH] [FAILED] User: Admin One (#3) | Action: session_expired | Details: Reason: idle_timeout | User Role: Admin | IP: ::1 | URI: /ITSECWB-MCO/Admin.php
 [2026-04-05 07:51:27 PM] [AUTH] [SUCCESS] User: Customer One | Action: login | Details: Role: Customer | IP: ::1 | URI: /ITSECWB-MCO/Login.php
 [2026-04-05 08:47:12 PM] [AUTH] [FAILED] User: Customer One (#1) | Action: session_expired | Details: Reason: idle_timeout | User Role: Customer | IP: ::1 | URI: /ITSECWB-MCO/index.php
+[2026-04-09 08:43:09 PM] [AUTH] [FAILED] User: Staff One (#4) | Action: session_expired | Details: Reason: idle_timeout | User Role: Staff | IP: ::1 | URI: /ITSECWB-MCO/
+[2026-04-09 08:44:02 PM] [AUTH] [SUCCESS] User: Staff One | Action: login | Details: Role: Staff | IP: ::1 | URI: /ITSECWB-MCO/Login.php
+[2026-04-09 08:45:59 PM] [AUTH] [SUCCESS] User: Staff One (#4) | Action: logout | Details: user_requested | IP: ::1 | URI: /ITSECWB-MCO/stock_management.php
