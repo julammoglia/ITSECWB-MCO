@@ -196,6 +196,23 @@ if (!function_exists('security_log_error_details')) {
     }
 }
 
+if (!function_exists('security_format_audit_timestamp')) {
+    function security_format_audit_timestamp(?string $timestamp): string
+    {
+        $timestamp = trim((string) $timestamp);
+        if ($timestamp === '') {
+            return '';
+        }
+
+        try {
+            $date = new DateTime($timestamp);
+            return $date->format('Y-m-d h:i:s A');
+        } catch (Throwable $exception) {
+            return $timestamp;
+        }
+    }
+}
+
 if (!function_exists('security_render_exception_payload')) {
     function security_render_exception_payload(Throwable $exception): array
     {
@@ -627,7 +644,7 @@ if (!function_exists('security_format_audit_log_line')) {
     function security_format_audit_log_line(array $payload): string
     {
         $prefix = implode(' ', [
-            '[' . date('Y-m-d h:i:s A', strtotime((string) ($payload['timestamp'] ?? 'now'))) . ']',
+            '[' . security_format_audit_timestamp((string) ($payload['timestamp'] ?? 'now')) . ']',
             '[' . security_normalize_log_category((string) ($payload['category'] ?? 'ADMIN')) . ']',
             '[' . security_normalize_log_status((string) ($payload['status'] ?? 'FAILED')) . ']',
         ]);
@@ -863,7 +880,7 @@ if (!function_exists('security_stream_audit_log_csv')) {
 
         foreach ($entries as $entry) {
             fputcsv($handle, [
-                $entry['timestamp'],
+                security_format_audit_timestamp($entry['timestamp'] ?? ''),
                 $entry['category'],
                 $entry['status'],
                 $entry['user'],
