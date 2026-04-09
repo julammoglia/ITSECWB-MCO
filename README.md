@@ -10,6 +10,7 @@ HTML: For structuring the web pages.
 JavaScript: Client-side functionality, such as interactivity and form handling.
 SQL: For database management (MySQL via phpMyAdmin)
 MySQL: Database for managing users, products, transactions, and more.
+Docker: Containerized deployment for Render and other hosting platforms.
 
 ## Prerequisites
 - Install XAMPP
@@ -20,6 +21,10 @@ MySQL: Database for managing users, products, transactions, and more.
 1) Create database
 2) Import pluggedin_itdbadm.sql
 3) Verify files
+
+Note:
+- The schema no longer relies on stored procedures or triggers.
+- Product, order, assignment, and audit side effects are now handled in PHP.
 
 If you already have an older local database imported, run the one-time migration:
 ```bash
@@ -32,17 +37,27 @@ This migration safely:
 - converts legacy plaintext passwords in `users.password` to bcrypt hashes
 
 ## Application Configuration
-- DB connection is set in includes/db.php:
-  - Host: 127.0.0.1
-  - User: root
-  - Password: "" (empty by default on XAMPP)
-  - DB name: pluggedin_itdbadm
-  - Port: 3307
+Database configuration now comes from environment variables. Local `.env` loading is supported through [`.env.example`](./.env.example), while Render should use dashboard environment variables.
 
-If your MySQL runs on a different port (e.g., 3306), change the last parameter accordingly:
-```php
-$conn = new mysqli('127.0.0.1', 'root', '', 'pluggedin_itdbadm', 3306);
-```
+Supported database variables:
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_CHARSET`
+- `DB_CONNECT_TIMEOUT`
+
+Optional SSL variables for external MySQL providers such as Aiven:
+- `DB_SSL_CA` or `DB_SSL_CA_BASE64`
+- `DB_SSL_CERT` or `DB_SSL_CERT_BASE64`
+- `DB_SSL_KEY` or `DB_SSL_KEY_BASE64`
+- `DB_SSL_CIPHER`
+- `DB_SSL_VERIFY_SERVER_CERT`
+
+Turnstile variables:
+- `TURNSTILE_SITE_KEY`
+- `TURNSTILE_SECRET_KEY`
 
 ## Running Locally (XAMPP)
 1) Place the project folder at:
@@ -51,11 +66,44 @@ $conn = new mysqli('127.0.0.1', 'root', '', 'pluggedin_itdbadm', 3306);
 2) Start XAMPP services
 - Start Apache and MySQL 
 
-3) Open in browser
+3) Configure local environment
+- Copy `.env.example` to `.env`
+- Set local database values, for example:
+  - `DB_HOST=127.0.0.1`
+  - `DB_PORT=3307`
+  - `DB_NAME=pluggedin_itdbadm`
+  - `DB_USER=root`
+  - `DB_PASSWORD=`
+
+4) Open in browser
 - Public catalog: http://localhost/ITSECWB-MCO/Index.php
 - Authentication: http://localhost/ITSECWB-MCO/Login.php
 - User dashboard: http://localhost/ITSECWB-MCO/User.php (requires login)
 - Admin dashboard: http://localhost/ITSECWB-MCO/Admin.php (requires Admin role)
+
+## Deployment on Render with Docker
+This repository now includes a [Dockerfile](./Dockerfile) for Render deployment.
+
+Recommended setup:
+1. Create an external MySQL database such as Aiven.
+2. Import [pluggedin_itdbadm.sql](./assets/pluggedin_itdbadm.sql) into that database.
+3. Create a new Render Web Service from this repo.
+4. Render will detect the Dockerfile and build the container.
+5. Add these environment variables in Render:
+   - `DB_HOST`
+   - `DB_PORT`
+   - `DB_NAME`
+   - `DB_USER`
+   - `DB_PASSWORD`
+   - `TURNSTILE_SITE_KEY`
+   - `TURNSTILE_SECRET_KEY`
+6. If your external DB requires SSL, also add:
+   - `DB_SSL_CA_BASE64` with the base64-encoded CA certificate
+   - optionally `DB_SSL_VERIFY_SERVER_CERT=true`
+
+Notes:
+- The container binds Apache to Render's `PORT` automatically.
+- Uploaded profile pictures, logs, and debug config remain filesystem-based, so use a persistent disk or external object storage if you need durable file storage in production.
 
 ## Authentication & Passwords
 - Registration, login verification, and password reset use password_hash/password_verify with bcrypt.
@@ -66,8 +114,13 @@ $conn = new mysqli('127.0.0.1', 'root', '', 'pluggedin_itdbadm', 3306);
 - Session keeps redirecting to Login:
   - Clear browser cookies; ensure PHP sessions are enabled and writable.
 
-- MySQL port mismatch:
-  - Update includes/db.php port to match your MySQL port (e.g., 3306).
+- Database connection failure:
+  - Verify `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
+  - Check `logs/error.log` for the latest connection error.
+
+- External MySQL SSL issues:
+  - Confirm the CA certificate is supplied using `DB_SSL_CA` or `DB_SSL_CA_BASE64`.
+  - Make sure the DB host and port match your provider settings.
 
 ## License
 - This project was developed solely for academic requirements. 

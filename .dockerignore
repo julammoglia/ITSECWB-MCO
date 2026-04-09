@@ -1,0 +1,8 @@
+.git
+.qodo
+.DS_Store
+.env
+logs/*.log
+config/debug_mode.json
+uploads/profile_pictures/*
+!uploads/profile_pictures/.htaccess
