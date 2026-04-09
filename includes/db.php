@@ -100,6 +100,3 @@ $conn->real_connect(
 if (!$conn->set_charset($dbCharset)) {
     throw new RuntimeException('Unable to set the database connection charset.');
 }
-
-$conn->set_charset('utf8mb4');
-?>

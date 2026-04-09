@@ -11,6 +11,7 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
+USE `defaultdb`;
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -28,11 +29,12 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `cart` (
-  `cart_id` int(11) NOT NULL,
+  `cart_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `product_code` int(11) NOT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
-  `date_added` timestamp NOT NULL DEFAULT current_timestamp()
+  `date_added` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`cart_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -50,7 +52,8 @@ INSERT INTO `cart` (`cart_id`, `user_id`, `product_code`, `quantity`, `date_adde
 
 CREATE TABLE `categories` (
   `category_code` int(11) NOT NULL,
-  `category_name` varchar(45) DEFAULT NULL
+  `category_name` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`category_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -74,7 +77,8 @@ CREATE TABLE `currencies` (
   `currency_code` int(11) NOT NULL,
   `price_php` varchar(45) DEFAULT NULL,
   `currency_name` varchar(45) DEFAULT NULL,
-  `symbol` varchar(5) DEFAULT NULL
+  `symbol` varchar(5) DEFAULT NULL,
+  PRIMARY KEY (`currency_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -96,7 +100,8 @@ CREATE TABLE `customer_deletion_log` (
   `user_id` int(11) NOT NULL,
   `first_name` varchar(45) DEFAULT NULL,
   `last_name` varchar(45) DEFAULT NULL,
-  `deletion_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `deletion_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -115,13 +120,14 @@ INSERT INTO `customer_deletion_log` (`user_id`, `first_name`, `last_name`, `dele
 --
 
 CREATE TABLE `customer_edit_log` (
-  `log_id` int(11) NOT NULL,
+  `log_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `old_first_name` varchar(255) DEFAULT NULL,
   `new_first_name` varchar(255) DEFAULT NULL,
   `old_last_name` varchar(255) DEFAULT NULL,
   `new_last_name` varchar(255) DEFAULT NULL,
-  `edit_time` datetime DEFAULT current_timestamp()
+  `edit_time` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`log_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -141,7 +147,8 @@ CREATE TABLE `inventory_log` (
   `product_code` int(11) NOT NULL,
   `old_qty` int(11) DEFAULT NULL,
   `new_qty` int(11) DEFAULT NULL,
-  `change_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `change_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`product_code`,`change_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -171,7 +178,8 @@ INSERT INTO `inventory_log` (`product_code`, `old_qty`, `new_qty`, `change_date`
 
 CREATE TABLE `isfavorite` (
   `user_id` int(11) NOT NULL,
-  `product_code` int(11) NOT NULL
+  `product_code` int(11) NOT NULL,
+  PRIMARY KEY (`user_id`,`product_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -192,12 +200,13 @@ INSERT INTO `isfavorite` (`user_id`, `product_code`) VALUES
 --
 
 CREATE TABLE `orders` (
-  `order_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `order_date` date DEFAULT NULL,
   `totalamt_php` float NOT NULL,
   `order_status` varchar(45) DEFAULT NULL,
-  `currency_code` int(11) DEFAULT NULL
+  `currency_code` int(11) DEFAULT NULL,
+  PRIMARY KEY (`order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -215,12 +224,13 @@ INSERT INTO `orders` (`order_id`, `user_id`, `order_date`, `totalamt_php`, `orde
 --
 
 CREATE TABLE `order_items` (
-  `order_item_id` int(11) NOT NULL,
+  `order_item_id` int(11) NOT NULL AUTO_INCREMENT,
   `order_id` int(11) NOT NULL,
   `product_code` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
   `srp_php` float DEFAULT NULL,
-  `totalprice_php` float DEFAULT NULL
+  `totalprice_php` float DEFAULT NULL,
+  PRIMARY KEY (`order_item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -243,7 +253,8 @@ CREATE TABLE `order_status_log` (
   `order_id` int(11) NOT NULL,
   `old_status` varchar(45) DEFAULT NULL,
   `new_status` varchar(45) DEFAULT NULL,
-  `change_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `change_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`order_id`,`change_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -270,13 +281,14 @@ INSERT INTO `order_status_log` (`order_id`, `old_status`, `new_status`, `change_
 --
 
 CREATE TABLE `payments` (
-  `payment_id` int(11) NOT NULL,
+  `payment_id` int(11) NOT NULL AUTO_INCREMENT,
   `currency_code` int(11) NOT NULL,
   `order_id` int(11) NOT NULL,
   `totalamt_php` float NOT NULL,
   `payment_status` enum('paid','unpaid') NOT NULL,
   `payment_method` enum('card','ewallet','cash') NOT NULL,
-  `payment_date` datetime DEFAULT NULL
+  `payment_date` datetime DEFAULT NULL,
+  PRIMARY KEY (`payment_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -294,12 +306,13 @@ INSERT INTO `payments` (`payment_id`, `currency_code`, `order_id`, `totalamt_php
 --
 
 CREATE TABLE `products` (
-  `product_code` int(11) NOT NULL,
+  `product_code` int(11) NOT NULL AUTO_INCREMENT,
   `category_code` int(11) DEFAULT NULL,
   `product_name` varchar(45) DEFAULT NULL,
   `description` varchar(45) DEFAULT NULL,
   `stock_qty` int(11) DEFAULT NULL,
-  `srp_php` float DEFAULT NULL
+  `srp_php` float DEFAULT NULL,
+  PRIMARY KEY (`product_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -331,7 +344,8 @@ CREATE TABLE `product_deletion_log` (
   `product_name` varchar(45) DEFAULT NULL,
   `category_code` int(11) DEFAULT NULL,
   `description` varchar(45) DEFAULT NULL,
-  `deletion_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `deletion_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`product_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -341,9 +355,11 @@ CREATE TABLE `product_deletion_log` (
 --
 
 CREATE TABLE `staff_assigned_orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
   `order_id` int(11) DEFAULT NULL,
-  `status` enum('ASSIGNED','COMPLETED') DEFAULT NULL
+  `status` enum('ASSIGNED','COMPLETED') DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -361,14 +377,15 @@ INSERT INTO `staff_assigned_orders` (`user_id`, `order_id`, `status`) VALUES
 --
 
 CREATE TABLE `users` (
-  `user_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_role` varchar(25) NOT NULL,
   `first_name` varchar(45) DEFAULT NULL,
   `last_name` varchar(45) DEFAULT NULL,
   `email` varchar(45) DEFAULT NULL,
   `phone` varchar(45) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `profile_picture` varchar(255) DEFAULT NULL
+  `profile_picture` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -389,54 +406,31 @@ INSERT INTO `users` (`user_id`, `user_role`, `first_name`, `last_name`, `email`,
 -- Indexes for table `cart`
 --
 ALTER TABLE `cart`
-  ADD PRIMARY KEY (`cart_id`),
   ADD UNIQUE KEY `unique_user_product` (`user_id`,`product_code`),
   ADD KEY `product_code` (`product_code`);
-
---
--- Indexes for table `categories`
---
-ALTER TABLE `categories`
-  ADD PRIMARY KEY (`category_code`);
-
---
--- Indexes for table `currencies`
---
-ALTER TABLE `currencies`
-  ADD PRIMARY KEY (`currency_code`);
-
---
--- Indexes for table `customer_deletion_log`
---
-ALTER TABLE `customer_deletion_log`
-  ADD PRIMARY KEY (`user_id`);
 
 --
 -- Indexes for table `customer_edit_log`
 --
 ALTER TABLE `customer_edit_log`
-  ADD PRIMARY KEY (`log_id`),
   ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `inventory_log`
 --
 ALTER TABLE `inventory_log`
-  ADD PRIMARY KEY (`product_code`,`change_date`),
   ADD KEY `change_date_idx` (`change_date`);
 
 --
 -- Indexes for table `isfavorite`
 --
 ALTER TABLE `isfavorite`
-  ADD PRIMARY KEY (`user_id`,`product_code`),
   ADD KEY `product_code_idx` (`product_code`);
 
 --
 -- Indexes for table `orders`
 --
 ALTER TABLE `orders`
-  ADD PRIMARY KEY (`order_id`),
   ADD KEY `user_id_idx` (`user_id`),
   ADD KEY `currency_code_idx` (`currency_code`);
 
@@ -444,7 +438,6 @@ ALTER TABLE `orders`
 -- Indexes for table `order_items`
 --
 ALTER TABLE `order_items`
-  ADD PRIMARY KEY (`order_item_id`),
   ADD KEY `product_code_idx` (`product_code`),
   ADD KEY `idx_order_id` (`order_id`),
   ADD KEY `idx_product_code` (`product_code`);
@@ -453,14 +446,12 @@ ALTER TABLE `order_items`
 -- Indexes for table `order_status_log`
 --
 ALTER TABLE `order_status_log`
-  ADD PRIMARY KEY (`order_id`,`change_date`),
   ADD KEY `change_date_idx` (`change_date`);
 
 --
 -- Indexes for table `payments`
 --
 ALTER TABLE `payments`
-  ADD PRIMARY KEY (`payment_id`),
   ADD KEY `fk_payments_currency_code` (`currency_code`),
   ADD KEY `fk_payments_order_id` (`order_id`);
 
@@ -468,33 +459,26 @@ ALTER TABLE `payments`
 -- Indexes for table `products`
 --
 ALTER TABLE `products`
-  ADD PRIMARY KEY (`product_code`),
   ADD KEY `category_code_idx` (`category_code`);
-
---
--- Indexes for table `product_deletion_log`
---
-ALTER TABLE `product_deletion_log`
-  ADD PRIMARY KEY (`product_code`);
 
 --
 -- Table structure for table `rate_limits`
 --
 
 CREATE TABLE `rate_limits` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `rl_key` varchar(120) NOT NULL,
   `ip` varchar(45) NOT NULL,
   `window_start` int(11) NOT NULL,
   `count` int(11) NOT NULL DEFAULT 0,
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Indexes for table `rate_limits`
 --
 ALTER TABLE `rate_limits`
-  ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_key_ip` (`rl_key`,`ip`);
 
 --
@@ -507,7 +491,6 @@ ALTER TABLE `rate_limits`
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `user_id_UNIQUE` (`user_id`),
   ADD UNIQUE KEY `users_email_unique` (`email`);
 
