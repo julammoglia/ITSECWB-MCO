@@ -56,11 +56,31 @@ if (!function_exists('security_ensure_directory')) {
     }
 }
 
+if (!function_exists('security_get_debug_env_override')) {
+    function security_get_debug_env_override(): ?bool
+    {
+        $value = getenv('APP_DEBUG');
+
+        if ($value === false || $value === '') {
+            return null;
+        }
+
+        $parsed = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        return $parsed;
+    }
+}
+
 if (!function_exists('security_is_debug_mode')) {
     function security_is_debug_mode(): bool
     {
         if (array_key_exists('security_debug_mode_cache', $GLOBALS)) {
             return (bool) $GLOBALS['security_debug_mode_cache'];
+        }
+
+        $envOverride = security_get_debug_env_override();
+        if ($envOverride !== null) {
+            $GLOBALS['security_debug_mode_cache'] = $envOverride;
+            return $envOverride;
         }
 
         $debugFile = security_get_debug_state_file_path();
